@@ -1,14 +1,20 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
 var errMissingAdminPW = errors.New("LDAP_ADMIN_PW is required")
@@ -18,6 +24,10 @@ const (
 	defaultRunDir     = "/var/run/slapd"
 	defaultRootpwPath = "/etc/ldap/rootpw.conf" //nolint:gosec // not a credential, just a file path
 	defaultConfDir    = "/etc/ldap/slapd.conf.d"
+	defaultLDAPURI    = "ldapi:///"
+	defaultHealthAddr = ":8080"
+	defaultSeedDir    = "/seed"
+	defaultPollDelay  = 2 * time.Second
 )
 
 // Main runs the ldap-manager CLI. Returns an exit code.
@@ -43,6 +53,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	rootCmd.AddCommand(newInitCmd())
+	rootCmd.AddCommand(newSidecarCmd())
 
 	return rootCmd
 }
@@ -83,7 +94,10 @@ func runInit() error {
 	}
 
 	slog.Info("writing rootpw.conf", "path", rootpwPath)
-	if err := os.MkdirAll(filepath.Dir(rootpwPath), 0o755); err != nil { //nolint:gosec // standard directory permissions
+	if err := os.MkdirAll( //nolint:gosec // standard directory permissions
+		filepath.Dir(rootpwPath),
+		0o755,
+	); err != nil {
 		return fmt.Errorf("creating parent for %s: %w", rootpwPath, err)
 	}
 	if err := os.WriteFile(rootpwPath, []byte("rootpw "+hash+"\n"), 0o600); err != nil {
@@ -101,6 +115,46 @@ func runInit() error {
 
 	slog.Info("init complete")
 	return nil
+}
+
+func newSidecarCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "sidecar",
+		Short: "Run as sidecar container: health checks and LDAP seeding",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runSidecar()
+		},
+	}
+}
+
+func runSidecar() error {
+	ldapURI := envOrDefault("LDAP_URI", defaultLDAPURI)
+	healthAddr := envOrDefault("HEALTH_ADDR", defaultHealthAddr)
+	seedDir := envOrDefault("SEED_DIR", defaultSeedDir)
+	dataDir := envOrDefault("LDAP_DATA_DIR", defaultDataDir)
+	baseDN := os.Getenv("LDAP_BASE_DN")
+	adminPW := os.Getenv("LDAP_ADMIN_PW")
+	bindDN := envOrDefault("LDAP_BIND_DN", "cn=admin,"+baseDN)
+
+	backend := &sidecar.RealLDAP{
+		URI:    ldapURI,
+		BindDN: bindDN,
+		BindPW: adminPW,
+	}
+
+	cfg := sidecar.Config{
+		HealthAddr: healthAddr,
+		SeedDir:    seedDir,
+		DataDir:    dataDir,
+		PollDelay:  defaultPollDelay,
+		Checker:    backend,
+		Seeder:     backend,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
+	return sidecar.Run(ctx, cfg)
 }
 
 func envOrDefault(key, fallback string) string {
