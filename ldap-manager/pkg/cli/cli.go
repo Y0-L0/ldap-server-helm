@@ -12,8 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
@@ -31,42 +29,37 @@ const (
 	defaultPollDelay  = 2 * time.Second
 )
 
-// Main runs the ldap-manager CLI. Returns an exit code.
-func Main(args []string, stdout, stderr io.Writer) int {
-	command := newRootCmd()
-	command.SetOut(stdout)
-	command.SetErr(stderr)
-	command.SetArgs(args[1:])
+// Commands maps subcommand names to their run functions.
+type Commands map[string]func() error
 
-	if err := command.Execute(); err != nil {
+// NewCommands returns the production command map.
+func NewCommands() Commands {
+	return Commands{
+		"init":    runInit,
+		"sidecar": runSidecar,
+	}
+}
+
+// Main runs the ldap-manager CLI. Returns an exit code.
+func Main(args []string, stderr io.Writer, cmds Commands) int {
+	if len(args) < 2 {
+		fmt.Fprintln(stderr, "usage: ldap-manager <init|sidecar>")
+		return 1
+	}
+
+	cmd := args[1]
+	fn, ok := cmds[cmd]
+	if !ok {
+		fmt.Fprintf(stderr, "unknown command: %s\n", cmd)
+		return 1
+	}
+
+	if err := fn(); err != nil {
+		slog.Error(cmd+" failed", "error", err)
 		return 1
 	}
 
 	return 0
-}
-
-func newRootCmd() *cobra.Command {
-	rootCmd := &cobra.Command{
-		Use:           "ldap-manager",
-		Short:         "LDAP server init and sidecar manager",
-		SilenceErrors: true,
-		SilenceUsage:  true,
-	}
-
-	rootCmd.AddCommand(newInitCmd())
-	rootCmd.AddCommand(newSidecarCmd())
-
-	return rootCmd
-}
-
-func newInitCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "init",
-		Short: "Run as init container: create directories and hash admin password",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runInit()
-		},
-	}
 }
 
 func runInit() error {
@@ -116,16 +109,6 @@ func runInit() error {
 
 	slog.Info("init complete")
 	return nil
-}
-
-func newSidecarCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "sidecar",
-		Short: "Run as sidecar container: health checks and LDAP seeding",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return runSidecar()
-		},
-	}
 }
 
 func runSidecar() error {

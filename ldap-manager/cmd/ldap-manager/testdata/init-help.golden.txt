@@ -1,7 +1,0 @@
-Run as init container: create directories and hash admin password
-
-Usage:
-  ldap-manager init [flags]
-
-Flags:
-  -h, --help   help for init

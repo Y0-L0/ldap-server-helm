@@ -2,10 +2,45 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+func (s *Unittest) TestMain_NoArgs() {
+	var stderr bytes.Buffer
+	code := Main([]string{"ldap-manager"}, &stderr, nil)
+	s.Require().Equal(1, code)
+	s.Require().Contains(stderr.String(), "usage:")
+}
+
+func (s *Unittest) TestMain_InvalidSubcommand() {
+	var stderr bytes.Buffer
+	code := Main([]string{"ldap-manager", "bogus"}, &stderr, Commands{})
+	s.Require().Equal(1, code)
+	s.Require().Contains(stderr.String(), "unknown command: bogus")
+}
+
+func (s *Unittest) TestMain_DispatchesCommand() {
+	called := false
+	var stubErr error
+	cmds := Commands{"init": func() error { called = true; return stubErr }}
+
+	var stderr bytes.Buffer
+	code := Main([]string{"ldap-manager", "init"}, &stderr, cmds)
+	s.Require().Equal(0, code)
+	s.Require().True(called)
+}
+
+func (s *Unittest) TestMain_CommandError() {
+	stubErr := errors.New("boom")
+	cmds := Commands{"fail": func() error { return stubErr }}
+
+	var stderr bytes.Buffer
+	code := Main([]string{"ldap-manager", "fail"}, &stderr, cmds)
+	s.Require().Equal(1, code)
+}
 
 func (s *Unittest) TestInit_CreatesDirectories() {
 	tmp := s.T().TempDir()
@@ -15,8 +50,7 @@ func (s *Unittest) TestInit_CreatesDirectories() {
 	s.T().Setenv("LDAP_ROOTPW_PATH", filepath.Join(tmp, "etc", "rootpw.conf"))
 	s.T().Setenv("LDAP_CONF_DIR", filepath.Join(tmp, "conf.d"))
 
-	code := Main([]string{"ldap-manager", "init"}, &bytes.Buffer{}, &bytes.Buffer{})
-	s.Require().Equal(0, code)
+	s.Require().NoError(runInit())
 
 	for _, dir := range []string{"data", "run", "conf.d"} {
 		info, err := os.Stat(filepath.Join(tmp, dir))
@@ -34,13 +68,11 @@ func (s *Unittest) TestInit_WritesRootpwConf() {
 	s.T().Setenv("LDAP_ROOTPW_PATH", rootpwPath)
 	s.T().Setenv("LDAP_CONF_DIR", filepath.Join(tmp, "conf.d"))
 
-	code := Main([]string{"ldap-manager", "init"}, &bytes.Buffer{}, &bytes.Buffer{})
-	s.Require().Equal(0, code)
+	s.Require().NoError(runInit())
 
 	content := string(s.ReadFile(rootpwPath))
 	s.Require().True(strings.HasPrefix(content, "rootpw {SSHA}"), "rootpw.conf should start with 'rootpw {SSHA}'")
 
-	// Extract the hash and verify it.
 	hash := strings.TrimPrefix(strings.TrimSpace(content), "rootpw ")
 	s.Require().True(VerifySSHA(hash, "secret"))
 }
@@ -54,8 +86,7 @@ func (s *Unittest) TestInit_WritesEmptyReplicationFragments() {
 	s.T().Setenv("LDAP_ROOTPW_PATH", filepath.Join(tmp, "rootpw.conf"))
 	s.T().Setenv("LDAP_CONF_DIR", confDir)
 
-	code := Main([]string{"ldap-manager", "init"}, &bytes.Buffer{}, &bytes.Buffer{})
-	s.Require().Equal(0, code)
+	s.Require().NoError(runInit())
 
 	for _, name := range []string{"serverid.conf", "syncrepl-config.conf", "syncrepl-data.conf"} {
 		data := s.ReadFile(filepath.Join(confDir, name))
@@ -65,19 +96,6 @@ func (s *Unittest) TestInit_WritesEmptyReplicationFragments() {
 
 func (s *Unittest) TestInit_MissingPassword() {
 	s.T().Setenv("LDAP_ADMIN_PW", "")
-	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "init"}, &bytes.Buffer{}, &stderr)
-	s.Require().Equal(1, code)
-}
-
-func (s *Unittest) TestMain_NoArgs() {
-	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager"}, &bytes.Buffer{}, &stderr)
-	s.Require().Equal(0, code)
-}
-
-func (s *Unittest) TestMain_InvalidSubcommand() {
-	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "bogus"}, &bytes.Buffer{}, &stderr)
-	s.Require().Equal(1, code)
+	err := runInit()
+	s.Require().ErrorIs(err, errMissingAdminPW)
 }
