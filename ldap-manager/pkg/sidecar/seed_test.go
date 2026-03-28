@@ -121,6 +121,55 @@ objectClass: organizationalUnit
 	s.Require().Equal(2, seeder.addCalls)
 }
 
+func (s *Unittest) TestSeed_MalformedLineSkipped() {
+	dataDir := s.T().TempDir()
+	seedDir := s.T().TempDir()
+	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=example,dc=org
+objectClass: top
+garbage_no_colon
+dc: example
+`))
+
+	seeder := &fakeLDAPSeeder{}
+	err := Seed(seeder, seedDir, dataDir)
+
+	s.Require().NoError(err)
+	s.Require().Equal(1, seeder.addCalls)
+	s.Require().Equal([]string{"top"}, seeder.entries[0].attrs["objectClass"])
+	s.Require().Equal([]string{"example"}, seeder.entries[0].attrs["dc"])
+}
+
+func (s *Unittest) TestSeed_UnreadableLDIFFile() {
+	dataDir := s.T().TempDir()
+	seedDir := s.T().TempDir()
+
+	// Create a directory named trick.ldif — glob matches it, os.Open fails.
+	s.Require().NoError(os.Mkdir(filepath.Join(seedDir, "trick.ldif"), 0o750))
+
+	seeder := &fakeLDAPSeeder{}
+	err := Seed(seeder, seedDir, dataDir)
+
+	s.Require().Error(err)
+	s.Require().Contains(err.Error(), "trick.ldif")
+}
+
+func (s *Unittest) TestSeed_SentinelWriteError() {
+	dataDir := s.T().TempDir()
+	seedDir := s.T().TempDir()
+
+	// Make dataDir read-only so sentinel write fails.
+	s.Require().NoError(os.Chmod(dataDir, 0o555)) //nolint:gosec // intentionally restrictive for test
+	s.T().Cleanup(func() {
+		_ = os.Chmod(dataDir, 0o750) //nolint:gosec // restore for cleanup
+	})
+
+	seeder := &fakeLDAPSeeder{}
+	err := Seed(seeder, seedDir, dataDir)
+
+	s.Require().Error(err)
+	s.Require().Contains(err.Error(), "writing sentinel")
+}
+
 func (s *Unittest) TestSeed_IgnoresNonLDIFFiles() {
 	dataDir := s.T().TempDir()
 	seedDir := s.T().TempDir()

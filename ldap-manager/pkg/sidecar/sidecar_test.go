@@ -2,7 +2,7 @@ package sidecar
 
 import (
 	"context"
-	"net/http"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -12,6 +12,7 @@ import (
 type fakeBackend struct {
 	healthy atomic.Bool
 	entries []seedEntry
+	addErr  error
 }
 
 func (f *fakeBackend) Check(_ context.Context) error {
@@ -22,6 +23,9 @@ func (f *fakeBackend) Check(_ context.Context) error {
 }
 
 func (f *fakeBackend) Add(dn string, attrs map[string][]string) error {
+	if f.addErr != nil {
+		return f.addErr
+	}
 	f.entries = append(f.entries, seedEntry{dn: dn, attrs: attrs})
 	return nil
 }
@@ -198,5 +202,29 @@ func (s *Unittest) TestWaitForSlapd_CancelledWhileWaiting() {
 	s.Require().ErrorIs(err, context.Canceled)
 }
 
-// Ensure http import is used (for http.StatusOK reference in other tests).
-var _ = http.StatusOK
+func (s *Unittest) TestRun_SeedErrorPropagates() {
+	dataDir := s.T().TempDir()
+	seedDir := s.T().TempDir()
+	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=test,dc=org
+objectClass: top
+`))
+
+	backend := &fakeBackend{addErr: errors.New("ldap: connection refused")}
+	backend.healthy.Store(true)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	cfg := Config{
+		HealthAddr: "127.0.0.1:0",
+		SeedDir:    seedDir,
+		DataDir:    dataDir,
+		PollDelay:  10 * time.Millisecond,
+		Checker:    backend,
+		Seeder:     backend,
+	}
+
+	err := Run(ctx, cfg)
+	s.Require().Error(err)
+	s.Require().Contains(err.Error(), "ldap: connection refused")
+}
