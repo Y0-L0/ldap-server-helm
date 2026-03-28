@@ -1,0 +1,86 @@
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v5.0.0"
+hooks = [
+  { id = "check-added-large-files" },
+  { id = "check-case-conflict" },
+  { id = "check-merge-conflict" },
+  { id = "check-yaml", exclude = "^helm/.+/templates/" },
+  { id = "check-executables-have-shebangs" },
+  { id = "detect-private-key" },
+  { id = "end-of-file-fixer" },
+  { id = "trailing-whitespace" },
+  { id = "fix-byte-order-marker" },
+]
+
+[[repos]]
+repo = "https://github.com/compilerla/conventional-pre-commit"
+rev = "v3.6.0"
+hooks = [
+  { id = "conventional-pre-commit", stages = ["commit-msg"] },
+]
+
+[[repos]]
+repo = "https://github.com/adrienverge/yamllint"
+rev = "v1.37.0"
+hooks = [
+  { id = "yamllint", args = ["-c", ".yamllint"], exclude = "^helm/.+/templates/" },
+]
+
+[[repos]]
+repo = "https://github.com/gruntwork-io/pre-commit"
+rev = "v0.1.30"
+hooks = [
+  { id = "shellcheck" },
+  { id = "helmlint" },
+]
+
+[[repos]]
+repo = "https://github.com/y0-l0/helm-snoop"
+rev = "v0.7.0"
+hooks = [
+  { id = "helm-snoop" },
+]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "go-test"
+name = "go test"
+entry = "go -C ldap-manager test ./..."
+language = "system"
+pass_filenames = false
+files = "\\.go$"
+
+[[repos.hooks]]
+id = "golangci-lint"
+name = "golangci-lint"
+entry = "sh -c 'cd ldap-manager && golangci-lint run --timeout 5m --fix'"
+language = "system"
+pass_filenames = false
+files = "\\.go$"
+
+[[repos.hooks]]
+id = "kyaml-enforce"
+name = "kYAML enforcement"
+entry = "sh -c '! grep -rn \"nindent\\|indent\\| {{-\" helm/ldap-server/templates/'"
+language = "system"
+pass_filenames = false
+files = "^helm/.+/templates/"
+
+[[repos.hooks]]
+id = "helm-unittest"
+name = "helm unittest"
+entry = "helm unittest helm/ldap-server/"
+language = "system"
+pass_filenames = false
+files = "^helm/"
+
+[[repos.hooks]]
+id = "kubeconform"
+name = "kubeconform"
+entry = "sh -c 'helm template ldap-server helm/ldap-server/ -f helm/ldap-server/linter_values.yaml | kubeconform -strict -kubernetes-version 1.29.0'"
+language = "system"
+pass_filenames = false
+files = "^helm/"

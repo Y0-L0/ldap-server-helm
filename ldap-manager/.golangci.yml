@@ -1,0 +1,18 @@
+version: "2"
+
+formatters:
+  enable:
+    - goimports
+    - gofumpt
+    - golines
+  settings:
+    golines:
+      max-len: 120
+
+linters:
+  default: all
+  disable:
+    - exhaustruct
+    - varnamelen
+    - ireturn
+    - wrapcheck
