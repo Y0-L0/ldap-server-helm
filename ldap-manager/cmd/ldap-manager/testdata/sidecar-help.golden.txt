@@ -1,0 +1,7 @@
+Run as sidecar container: health checks and LDAP seeding
+
+Usage:
+  ldap-manager sidecar [flags]
+
+Flags:
+  -h, --help   help for sidecar

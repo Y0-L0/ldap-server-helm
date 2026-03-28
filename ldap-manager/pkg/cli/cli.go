@@ -82,7 +82,7 @@ func runInit() error {
 	// Create directories.
 	for _, dir := range []string{dataDir, runDir, confDir} {
 		slog.Info("creating directory", "path", dir)
-		if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // standard directory permissions
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return fmt.Errorf("creating %s: %w", dir, err)
 		}
 	}
@@ -94,9 +94,9 @@ func runInit() error {
 	}
 
 	slog.Info("writing rootpw.conf", "path", rootpwPath)
-	if err := os.MkdirAll( //nolint:gosec // standard directory permissions
+	if err := os.MkdirAll(
 		filepath.Dir(rootpwPath),
-		0o755,
+		0o750,
 	); err != nil {
 		return fmt.Errorf("creating parent for %s: %w", rootpwPath, err)
 	}
@@ -108,7 +108,7 @@ func runInit() error {
 	for _, name := range []string{"serverid.conf", "syncrepl-config.conf", "syncrepl-data.conf"} {
 		path := filepath.Join(confDir, name)
 		slog.Info("writing empty replication fragment", "path", path)
-		if err := os.WriteFile(path, nil, 0o644); err != nil { //nolint:gosec // config file
+		if err := os.WriteFile(path, nil, 0o600); err != nil {
 			return fmt.Errorf("writing %s: %w", path, err)
 		}
 	}

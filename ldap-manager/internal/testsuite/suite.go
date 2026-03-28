@@ -35,13 +35,13 @@ func (s *LoggingSuite) TearDownTest() {
 // WriteFile creates parent directories as needed and writes data to path.
 // Test fails on error.
 func (s *LoggingSuite) WriteFile(path string, data []byte) {
-	if err := os.MkdirAll( //nolint:gosec // test helper, relaxed permissions are fine
+	if err := os.MkdirAll(
 		filepath.Dir(path),
-		0o755,
+		0o750,
 	); err != nil {
 		s.Require().NoError(err, "mkdir parent for %s", path)
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil { //nolint:gosec // test helper, relaxed permissions are fine
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		s.Require().NoError(err, "write file %s", path)
 	}
 }

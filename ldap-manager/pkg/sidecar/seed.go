@@ -38,10 +38,10 @@ func Seed(seeder LDAPSeeder, seedDir, dataDir string) error {
 		}
 	}
 
-	if err := os.WriteFile( //nolint:gosec // sentinel file, relaxed permissions
+	if err := os.WriteFile(
 		sentinel,
 		[]byte("initialized\n"),
-		0o644,
+		0o600,
 	); err != nil {
 		return fmt.Errorf("writing sentinel: %w", err)
 	}
