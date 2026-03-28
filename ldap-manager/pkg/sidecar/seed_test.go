@@ -160,7 +160,7 @@ func (s *Unittest) TestSeed_SentinelWriteError() {
 	// Make dataDir read-only so sentinel write fails.
 	s.Require().NoError(os.Chmod(dataDir, 0o555)) //nolint:gosec // intentionally restrictive for test
 	s.T().Cleanup(func() {
-		_ = os.Chmod(dataDir, 0o750) //nolint:gosec // restore for cleanup
+		_ = os.Chmod(dataDir, 0o700) //nolint:gosec // restore for cleanup
 	})
 
 	seeder := &fakeLDAPSeeder{}
