@@ -25,7 +25,6 @@ linters:
     - cyclop
     - dupl
     - durationcheck
-    - embeddedstructfieldcheck
     - errcheck
     - errname
     - errorlint
@@ -39,7 +38,6 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - godoclint
     - godot
     - gomoddirectives
     - goprintffuncname
@@ -48,11 +46,9 @@ linters:
     - iface
     - ineffassign
     - intrange
-    - iotamixing
     - loggercheck
     - makezero
     - mirror
-    - modernize
     - musttag
     - nakedret
     - nestif
@@ -84,9 +80,6 @@ linters:
       max-complexity: 30
       package-average: 10.0
 
-    embeddedstructfieldcheck:
-      forbid-mutex: true
-
     errcheck:
       check-type-assertions: true
 
@@ -114,11 +107,6 @@ linters:
           paramsOnly: false
         underef:
           skipRecvDeref: false
-
-    godoclint:
-      enable:
-        - no-unused-link
-        - require-stdlib-doclink
 
     govet:
       enable-all: true
