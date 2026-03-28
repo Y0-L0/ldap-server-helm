@@ -1,13 +1,14 @@
-package sidecar
+// Package ldap implements the LDAP adapter using go-ldap.
+package ldap
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/go-ldap/ldap/v3"
+	goldap "github.com/go-ldap/ldap/v3"
 )
 
-// RealLDAP implements LDAPChecker and LDAPSeeder using a real LDAP connection.
+// RealLDAP implements sidecar.LDAPChecker and sidecar.LDAPSeeder using a real LDAP connection.
 type RealLDAP struct {
 	URI    string
 	BindDN string
@@ -16,16 +17,16 @@ type RealLDAP struct {
 
 // Check connects to slapd and performs a root DSE search.
 func (r *RealLDAP) Check(_ context.Context) error {
-	conn, err := ldap.DialURL(r.URI)
+	conn, err := goldap.DialURL(r.URI)
 	if err != nil {
 		return fmt.Errorf("connecting to %s: %w", r.URI, err)
 	}
 	defer conn.Close()
 
-	req := ldap.NewSearchRequest(
+	req := goldap.NewSearchRequest(
 		"",
-		ldap.ScopeBaseObject,
-		ldap.NeverDerefAliases,
+		goldap.ScopeBaseObject,
+		goldap.NeverDerefAliases,
 		0, 0, false,
 		"(objectClass=*)",
 		[]string{"namingContexts"},
@@ -42,7 +43,7 @@ func (r *RealLDAP) Check(_ context.Context) error {
 
 // Add connects to slapd, binds, and adds an entry.
 func (r *RealLDAP) Add(dn string, attrs map[string][]string) error {
-	conn, err := ldap.DialURL(r.URI)
+	conn, err := goldap.DialURL(r.URI)
 	if err != nil {
 		return fmt.Errorf("connecting to %s: %w", r.URI, err)
 	}
@@ -52,7 +53,7 @@ func (r *RealLDAP) Add(dn string, attrs map[string][]string) error {
 		return fmt.Errorf("binding as %s: %w", r.BindDN, err)
 	}
 
-	addReq := ldap.NewAddRequest(dn, nil)
+	addReq := goldap.NewAddRequest(dn, nil)
 	for key, values := range attrs {
 		addReq.Attribute(key, values)
 	}

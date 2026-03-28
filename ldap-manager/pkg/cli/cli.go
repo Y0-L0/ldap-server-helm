@@ -14,6 +14,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
@@ -136,7 +137,7 @@ func runSidecar() error {
 	adminPW := os.Getenv("LDAP_ADMIN_PW")
 	bindDN := envOrDefault("LDAP_BIND_DN", "cn=admin,"+baseDN)
 
-	backend := &sidecar.RealLDAP{
+	backend := &ldap.RealLDAP{
 		URI:    ldapURI,
 		BindDN: bindDN,
 		BindPW: adminPW,
