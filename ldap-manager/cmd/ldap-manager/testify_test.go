@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/jlohmer/ldap-manager/internal/testsuite"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/internal/testsuite"
 )
 
 var update = flag.Bool("update", false, "update golden files")

@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/jlohmer/ldap-manager/pkg/cli"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/cli"
 )
 
 var (

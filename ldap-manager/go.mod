@@ -1,6 +1,6 @@
 module github.com/y0-l0/ldap-server-helm/ldap-manager
 
-go 1.24.4
+go 1.26.1
 
 require (
 	github.com/go-ldap/ldap/v3 v3.4.13
