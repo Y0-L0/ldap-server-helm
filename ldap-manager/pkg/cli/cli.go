@@ -1,0 +1,111 @@
+package cli
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+
+	"github.com/spf13/cobra"
+)
+
+var errMissingAdminPW = errors.New("LDAP_ADMIN_PW is required")
+
+const (
+	defaultDataDir    = "/var/lib/ldap"
+	defaultRunDir     = "/var/run/slapd"
+	defaultRootpwPath = "/etc/ldap/rootpw.conf" //nolint:gosec // not a credential, just a file path
+	defaultConfDir    = "/etc/ldap/slapd.conf.d"
+)
+
+// Main runs the ldap-manager CLI. Returns an exit code.
+func Main(args []string, stdout, stderr io.Writer) int {
+	command := newRootCmd()
+	command.SetOut(stdout)
+	command.SetErr(stderr)
+	command.SetArgs(args[1:])
+
+	if err := command.Execute(); err != nil {
+		return 1
+	}
+
+	return 0
+}
+
+func newRootCmd() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:           "ldap-manager",
+		Short:         "LDAP server init and sidecar manager",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+	}
+
+	rootCmd.AddCommand(newInitCmd())
+
+	return rootCmd
+}
+
+func newInitCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "init",
+		Short: "Run as init container: create directories and hash admin password",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return runInit()
+		},
+	}
+}
+
+func runInit() error {
+	dataDir := envOrDefault("LDAP_DATA_DIR", defaultDataDir)
+	runDir := envOrDefault("LDAP_RUN_DIR", defaultRunDir)
+	rootpwPath := envOrDefault("LDAP_ROOTPW_PATH", defaultRootpwPath)
+	confDir := envOrDefault("LDAP_CONF_DIR", defaultConfDir)
+	adminPW := os.Getenv("LDAP_ADMIN_PW")
+
+	if adminPW == "" {
+		return errMissingAdminPW
+	}
+
+	// Create directories.
+	for _, dir := range []string{dataDir, runDir, confDir} {
+		slog.Info("creating directory", "path", dir)
+		if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // standard directory permissions
+			return fmt.Errorf("creating %s: %w", dir, err)
+		}
+	}
+
+	// Generate SSHA hash and write rootpw.conf.
+	hash, err := GenerateSSHA(adminPW)
+	if err != nil {
+		return fmt.Errorf("generating SSHA hash: %w", err)
+	}
+
+	slog.Info("writing rootpw.conf", "path", rootpwPath)
+	if err := os.MkdirAll(filepath.Dir(rootpwPath), 0o755); err != nil { //nolint:gosec // standard directory permissions
+		return fmt.Errorf("creating parent for %s: %w", rootpwPath, err)
+	}
+	if err := os.WriteFile(rootpwPath, []byte("rootpw "+hash+"\n"), 0o600); err != nil {
+		return fmt.Errorf("writing %s: %w", rootpwPath, err)
+	}
+
+	// Write empty replication fragment files.
+	for _, name := range []string{"serverid.conf", "syncrepl-config.conf", "syncrepl-data.conf"} {
+		path := filepath.Join(confDir, name)
+		slog.Info("writing empty replication fragment", "path", path)
+		if err := os.WriteFile(path, nil, 0o644); err != nil { //nolint:gosec // config file
+			return fmt.Errorf("writing %s: %w", path, err)
+		}
+	}
+
+	slog.Info("init complete")
+	return nil
+}
+
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
