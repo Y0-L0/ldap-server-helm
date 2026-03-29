@@ -12,8 +12,8 @@ type LDAPChecker interface {
 	Check(ctx context.Context) error
 }
 
-// NewHealthServer returns an http.Server serving /healthz and /readyz.
-func NewHealthServer(addr string, checker LDAPChecker) *http.Server {
+// newHealthServer returns an http.Server serving /healthz and /readyz.
+func newHealthServer(addr string, checker LDAPChecker) *http.Server {
 	mux := http.NewServeMux()
 
 	check := func(w http.ResponseWriter, r *http.Request) {

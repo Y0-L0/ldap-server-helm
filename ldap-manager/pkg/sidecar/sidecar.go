@@ -22,7 +22,7 @@ type Config struct {
 
 // Run starts the sidecar. Blocks until ctx is cancelled.
 func Run(ctx context.Context, cfg Config) error {
-	srv := NewHealthServer(cfg.HealthAddr, cfg.Checker)
+	srv := newHealthServer(cfg.HealthAddr, cfg.Checker)
 
 	go func() {
 		slog.Info("starting health server", "addr", cfg.HealthAddr)
@@ -35,7 +35,7 @@ func Run(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("waiting for slapd: %w", err)
 	}
 
-	if err := Seed(cfg.Seeder, cfg.SeedDir, cfg.DataDir); err != nil {
+	if err := seed(cfg.Seeder, cfg.SeedDir, cfg.DataDir); err != nil {
 		return fmt.Errorf("seeding: %w", err)
 	}
 

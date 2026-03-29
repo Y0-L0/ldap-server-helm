@@ -30,7 +30,7 @@ func (s *Unittest) TestHealthz() {
 	for _, tc := range tests {
 		s.Run(tc.name, func() {
 			checker := &fakeLDAPChecker{healthy: tc.healthy}
-			srv := NewHealthServer(":0", checker)
+			srv := newHealthServer(":0", checker)
 
 			req, _ := http.NewRequestWithContext(s.T().Context(), http.MethodGet, "/healthz", nil)
 			rec := httptest.NewRecorder()
@@ -53,7 +53,7 @@ func (s *Unittest) TestReadyz() {
 	for _, tc := range tests {
 		s.Run(tc.name, func() {
 			checker := &fakeLDAPChecker{healthy: tc.healthy}
-			srv := NewHealthServer(":0", checker)
+			srv := newHealthServer(":0", checker)
 
 			req, _ := http.NewRequestWithContext(s.T().Context(), http.MethodGet, "/readyz", nil)
 			rec := httptest.NewRecorder()

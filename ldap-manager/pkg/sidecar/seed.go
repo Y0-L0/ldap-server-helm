@@ -17,9 +17,9 @@ type LDAPSeeder interface {
 	Add(dn string, attrs map[string][]string) error
 }
 
-// Seed loads LDIF files from seedDir into slapd.
+// seed loads LDIF files from seedDir into slapd.
 // Skips seeding if a sentinel file exists at <dataDir>/.initialized.
-func Seed(seeder LDAPSeeder, seedDir, dataDir string) error {
+func seed(seeder LDAPSeeder, seedDir, dataDir string) error {
 	sentinel := filepath.Join(dataDir, sentinelFile)
 	if _, err := os.Stat(sentinel); err == nil {
 		slog.Info("sentinel exists, skipping seed", "path", sentinel)
