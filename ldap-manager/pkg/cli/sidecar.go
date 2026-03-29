@@ -11,6 +11,21 @@ import (
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
+type ldapConfig struct {
+	uri    string
+	bindDN string
+	bindPW string
+}
+
+func parseLDAPConfig() ldapConfig {
+	baseDN := os.Getenv("LDAP_BASE_DN")
+	return ldapConfig{
+		uri:    envOrDefault("LDAP_URI", "ldapi:///"),
+		bindDN: envOrDefault("LDAP_BIND_DN", "cn=admin,"+baseDN),
+		bindPW: os.Getenv("LDAP_ADMIN_PW"),
+	}
+}
+
 func parseSidecarConfig() sidecar.Config {
 	return sidecar.Config{
 		HealthAddr: envOrDefault("HEALTH_ADDR", ":8080"),
@@ -20,14 +35,11 @@ func parseSidecarConfig() sidecar.Config {
 	}
 }
 
-func runSidecar() error {
-	cfg := parseSidecarConfig()
-	baseDN := os.Getenv("LDAP_BASE_DN")
-
+func runSidecar(cfg sidecar.Config, lcfg ldapConfig) error {
 	backend := &ldapadapter.RealLDAP{
-		URI:    envOrDefault("LDAP_URI", "ldapi:///"),
-		BindDN: envOrDefault("LDAP_BIND_DN", "cn=admin,"+baseDN),
-		BindPW: os.Getenv("LDAP_ADMIN_PW"),
+		URI:    lcfg.uri,
+		BindDN: lcfg.bindDN,
+		BindPW: lcfg.bindPW,
 	}
 
 	ctx, stop := signal.NotifyContext(

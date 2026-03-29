@@ -23,7 +23,9 @@ func NewCommands() Commands {
 			}
 			return initpkg.Run(cfg)
 		},
-		"sidecar": runSidecar,
+		"sidecar": func() error {
+			return runSidecar(parseSidecarConfig(), parseLDAPConfig())
+		},
 	}
 }
 
