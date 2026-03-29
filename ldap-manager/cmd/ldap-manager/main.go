@@ -8,5 +8,5 @@ import (
 )
 
 func main() {
-	os.Exit(cli.Main(os.Args, os.Stderr, cli.NewCommands()))
+	os.Exit(cli.Main(os.Args, os.Stderr, cli.NewApp()))
 }

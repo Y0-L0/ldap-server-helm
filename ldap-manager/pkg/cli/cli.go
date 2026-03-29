@@ -8,29 +8,25 @@ import (
 	"os"
 
 	initpkg "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/init"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
-// Commands maps subcommand names to their run functions.
-type Commands map[string]func() error
+// App holds the injected run functions for each subcommand.
+type App struct {
+	RunInit    func(initpkg.Config) error
+	RunSidecar func(sidecar.Config, ldapConfig) error
+}
 
-// NewCommands returns the production command map.
-func NewCommands() Commands {
-	return Commands{
-		"init": func() error {
-			cfg, err := parseInitConfig()
-			if err != nil {
-				return err
-			}
-			return initpkg.Run(cfg)
-		},
-		"sidecar": func() error {
-			return runSidecar(parseSidecarConfig(), parseLDAPConfig())
-		},
+// NewApp returns the production App wiring.
+func NewApp() App {
+	return App{
+		RunInit:    initpkg.Run,
+		RunSidecar: runSidecar,
 	}
 }
 
 // Main runs the ldap-manager CLI. Returns an exit code.
-func Main(args []string, stderr io.Writer, cmds Commands) int {
+func Main(args []string, stderr io.Writer, app App) int {
 	setupLogging()
 
 	if len(args) < 2 {
@@ -39,13 +35,24 @@ func Main(args []string, stderr io.Writer, cmds Commands) int {
 	}
 
 	cmd := args[1]
-	fn, ok := cmds[cmd]
-	if !ok {
+	var err error
+
+	switch cmd {
+	case "init":
+		cfg, parseErr := parseInitConfig()
+		if parseErr != nil {
+			err = parseErr
+		} else {
+			err = app.RunInit(cfg)
+		}
+	case "sidecar":
+		err = app.RunSidecar(parseSidecarConfig(), parseLDAPConfig())
+	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n", cmd)
 		return 1
 	}
 
-	if err := fn(); err != nil {
+	if err != nil {
 		slog.Error(cmd+" failed", "error", err)
 		return 1
 	}
