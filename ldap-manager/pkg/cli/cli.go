@@ -29,6 +29,8 @@ func NewCommands() Commands {
 
 // Main runs the ldap-manager CLI. Returns an exit code.
 func Main(args []string, stderr io.Writer, cmds Commands) int {
+	setupLogging()
+
 	if len(args) < 2 {
 		fmt.Fprintln(stderr, "usage: ldap-manager <init|sidecar>")
 		return 1
