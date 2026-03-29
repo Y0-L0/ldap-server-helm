@@ -3,9 +3,6 @@ package cli
 import (
 	"bytes"
 	"errors"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 func (s *Unittest) TestMain_NoArgs() {
@@ -42,60 +39,32 @@ func (s *Unittest) TestMain_CommandError() {
 	s.Require().Equal(1, code)
 }
 
-func (s *Unittest) TestInit_CreatesDirectories() {
-	tmp := s.T().TempDir()
-	s.T().Setenv("LDAP_ADMIN_PW", "test")
-	s.T().Setenv("LDAP_DATA_DIR", filepath.Join(tmp, "data"))
-	s.T().Setenv("LDAP_RUN_DIR", filepath.Join(tmp, "run"))
-	s.T().Setenv("LDAP_ROOTPW_PATH", filepath.Join(tmp, "etc", "rootpw.conf"))
-	s.T().Setenv("LDAP_CONF_DIR", filepath.Join(tmp, "conf.d"))
-
-	s.Require().NoError(runInit())
-
-	for _, dir := range []string{"data", "run", "conf.d"} {
-		info, err := os.Stat(filepath.Join(tmp, dir))
-		s.Require().NoError(err, "directory %s should exist", dir)
-		s.Require().True(info.IsDir())
-	}
-}
-
-func (s *Unittest) TestInit_WritesRootpwConf() {
-	tmp := s.T().TempDir()
-	rootpwPath := filepath.Join(tmp, "etc", "rootpw.conf")
+func (s *Unittest) TestParseInitConfig() {
 	s.T().Setenv("LDAP_ADMIN_PW", "secret")
-	s.T().Setenv("LDAP_DATA_DIR", filepath.Join(tmp, "data"))
-	s.T().Setenv("LDAP_RUN_DIR", filepath.Join(tmp, "run"))
-	s.T().Setenv("LDAP_ROOTPW_PATH", rootpwPath)
-	s.T().Setenv("LDAP_CONF_DIR", filepath.Join(tmp, "conf.d"))
+	s.T().Setenv("LDAP_DATA_DIR", "/custom/data")
+	s.T().Setenv("LDAP_RUN_DIR", "/custom/run")
+	s.T().Setenv("LDAP_ROOTPW_PATH", "/custom/rootpw.conf")
 
-	s.Require().NoError(runInit())
-
-	content := string(s.ReadFile(rootpwPath))
-	s.Require().True(strings.HasPrefix(content, "rootpw {SSHA}"), "rootpw.conf should start with 'rootpw {SSHA}'")
-
-	hash := strings.TrimPrefix(strings.TrimSpace(content), "rootpw ")
-	s.Require().True(VerifySSHA(hash, "secret"))
+	cfg, err := parseInitConfig()
+	s.Require().NoError(err)
+	s.Require().Equal("/custom/data", cfg.DataDir)
+	s.Require().Equal("/custom/run", cfg.RunDir)
+	s.Require().Equal("/custom/rootpw.conf", cfg.RootpwPath)
+	s.Require().Equal("secret", cfg.AdminPW)
 }
 
-func (s *Unittest) TestInit_WritesEmptyReplicationFragments() {
-	tmp := s.T().TempDir()
-	confDir := filepath.Join(tmp, "conf.d")
-	s.T().Setenv("LDAP_ADMIN_PW", "test")
-	s.T().Setenv("LDAP_DATA_DIR", filepath.Join(tmp, "data"))
-	s.T().Setenv("LDAP_RUN_DIR", filepath.Join(tmp, "run"))
-	s.T().Setenv("LDAP_ROOTPW_PATH", filepath.Join(tmp, "rootpw.conf"))
-	s.T().Setenv("LDAP_CONF_DIR", confDir)
+func (s *Unittest) TestParseInitConfig_Defaults() {
+	s.T().Setenv("LDAP_ADMIN_PW", "secret")
 
-	s.Require().NoError(runInit())
-
-	for _, name := range []string{"serverid.conf", "syncrepl-config.conf", "syncrepl-data.conf"} {
-		data := s.ReadFile(filepath.Join(confDir, name))
-		s.Require().Empty(data, "%s should be empty", name)
-	}
+	cfg, err := parseInitConfig()
+	s.Require().NoError(err)
+	s.Require().Equal("/var/lib/ldap", cfg.DataDir)
+	s.Require().Equal("/var/run/slapd", cfg.RunDir)
+	s.Require().Equal("/etc/ldap/rootpw.conf", cfg.RootpwPath)
 }
 
-func (s *Unittest) TestInit_MissingPassword() {
+func (s *Unittest) TestParseInitConfig_MissingPassword() {
 	s.T().Setenv("LDAP_ADMIN_PW", "")
-	err := runInit()
+	_, err := parseInitConfig()
 	s.Require().ErrorIs(err, errMissingAdminPW)
 }
