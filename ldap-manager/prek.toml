@@ -1,0 +1,18 @@
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "golangci-lint"
+name = "golangci-lint"
+entry = "golangci-lint run --timeout 5m --fix"
+language = "system"
+pass_filenames = false
+files = "\\.go$"
+
+[[repos.hooks]]
+id = "go-test"
+name = "go test"
+entry = "go test ./..."
+language = "system"
+pass_filenames = false
+files = "\\.go$"

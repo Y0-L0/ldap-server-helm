@@ -46,22 +46,6 @@ hooks = [
 repo = "local"
 
 [[repos.hooks]]
-id = "go-test"
-name = "go test"
-entry = "go -C ldap-manager test ./..."
-language = "system"
-pass_filenames = false
-files = "\\.go$"
-
-[[repos.hooks]]
-id = "golangci-lint"
-name = "golangci-lint"
-entry = "sh -c 'cd ldap-manager && golangci-lint run --timeout 5m --fix'"
-language = "system"
-pass_filenames = false
-files = "\\.go$"
-
-[[repos.hooks]]
 id = "kyaml-enforce"
 name = "kYAML enforcement"
 entry = "sh -c '! grep -rn \"nindent\\|indent\\| {{-\" helm/ldap-server/templates/'"
