@@ -8,7 +8,7 @@ import (
 	goldap "github.com/go-ldap/ldap/v3"
 )
 
-// RealLDAP implements sidecar.LDAPChecker and sidecar.LDAPSeeder using a real LDAP connection.
+// RealLDAP implements sidecar.Backend using a real LDAP connection.
 type RealLDAP struct {
 	URI    string
 	BindDN string

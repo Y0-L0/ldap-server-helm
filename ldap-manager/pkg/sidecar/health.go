@@ -1,23 +1,16 @@
-// Package sidecar implements the ldap-manager sidecar logic: health checks and LDAP seeding.
 package sidecar
 
 import (
-	"context"
 	"net/http"
 	"time"
 )
 
-// LDAPChecker tests whether slapd is responsive.
-type LDAPChecker interface {
-	Check(ctx context.Context) error
-}
-
 // newHealthServer returns an http.Server serving /healthz and /readyz.
-func newHealthServer(addr string, checker LDAPChecker) *http.Server {
+func newHealthServer(addr string, backend Backend) *http.Server {
 	mux := http.NewServeMux()
 
 	check := func(w http.ResponseWriter, r *http.Request) {
-		if err := checker.Check(r.Context()); err != nil {
+		if err := backend.Check(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}

@@ -7,16 +7,18 @@ import (
 	"net/http/httptest"
 )
 
-type fakeLDAPChecker struct {
+type fakeHealthBackend struct {
 	healthy bool
 }
 
-func (f *fakeLDAPChecker) Check(_ context.Context) error {
+func (f *fakeHealthBackend) Check(_ context.Context) error {
 	if !f.healthy {
 		return errors.New("unhealthy")
 	}
 	return nil
 }
+
+func (f *fakeHealthBackend) Add(_ string, _ map[string][]string) error { return nil }
 
 func (s *Unittest) TestHealthz() {
 	tests := []struct {
@@ -29,8 +31,8 @@ func (s *Unittest) TestHealthz() {
 	}
 	for _, tc := range tests {
 		s.Run(tc.name, func() {
-			checker := &fakeLDAPChecker{healthy: tc.healthy}
-			srv := newHealthServer(":0", checker)
+			backend := &fakeHealthBackend{healthy: tc.healthy}
+			srv := newHealthServer(":0", backend)
 
 			req, _ := http.NewRequestWithContext(s.T().Context(), http.MethodGet, "/healthz", nil)
 			rec := httptest.NewRecorder()
@@ -52,8 +54,8 @@ func (s *Unittest) TestReadyz() {
 	}
 	for _, tc := range tests {
 		s.Run(tc.name, func() {
-			checker := &fakeLDAPChecker{healthy: tc.healthy}
-			srv := newHealthServer(":0", checker)
+			backend := &fakeHealthBackend{healthy: tc.healthy}
+			srv := newHealthServer(":0", backend)
 
 			req, _ := http.NewRequestWithContext(s.T().Context(), http.MethodGet, "/readyz", nil)
 			rec := httptest.NewRecorder()

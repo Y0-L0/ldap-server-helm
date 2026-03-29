@@ -11,7 +11,17 @@ import (
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
+func parseSidecarConfig() sidecar.Config {
+	return sidecar.Config{
+		HealthAddr: envOrDefault("HEALTH_ADDR", ":8080"),
+		SeedDir:    envOrDefault("SEED_DIR", "/seed"),
+		DataDir:    envOrDefault("LDAP_DATA_DIR", "/var/lib/ldap"),
+		PollDelay:  2 * time.Second,
+	}
+}
+
 func runSidecar() error {
+	cfg := parseSidecarConfig()
 	baseDN := os.Getenv("LDAP_BASE_DN")
 
 	backend := &ldapadapter.RealLDAP{
@@ -20,20 +30,11 @@ func runSidecar() error {
 		BindPW: os.Getenv("LDAP_ADMIN_PW"),
 	}
 
-	cfg := sidecar.Config{
-		HealthAddr: envOrDefault("HEALTH_ADDR", ":8080"),
-		SeedDir:    envOrDefault("SEED_DIR", "/seed"),
-		DataDir:    envOrDefault("LDAP_DATA_DIR", "/var/lib/ldap"),
-		PollDelay:  2 * time.Second,
-		Checker:    backend,
-		Seeder:     backend,
-	}
-
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGTERM, syscall.SIGINT,
 	)
 	defer stop()
 
-	return sidecar.Run(ctx, cfg)
+	return sidecar.Run(ctx, cfg, backend)
 }

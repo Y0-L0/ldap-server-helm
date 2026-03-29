@@ -11,7 +11,7 @@ import (
 
 type fakeBackend struct {
 	healthy atomic.Bool
-	entries []seedEntry
+	entries []addedEntry
 	addErr  error
 }
 
@@ -26,7 +26,7 @@ func (f *fakeBackend) Add(dn string, attrs map[string][]string) error {
 	if f.addErr != nil {
 		return f.addErr
 	}
-	f.entries = append(f.entries, seedEntry{dn: dn, attrs: attrs})
+	f.entries = append(f.entries, addedEntry{dn: dn, attrs: attrs})
 	return nil
 }
 
@@ -53,12 +53,10 @@ objectClass: top
 		SeedDir:    seedDir,
 		DataDir:    dataDir,
 		PollDelay:  10 * time.Millisecond,
-		Checker:    backend,
-		Seeder:     backend,
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg) }()
+	go func() { done <- Run(ctx, cfg, backend) }()
 
 	// Wait for sentinel to appear, proving seed completed.
 	s.Require().Eventually(func() bool {
@@ -87,12 +85,10 @@ func (s *Unittest) TestRun_WaitsForSlapd() {
 		SeedDir:    seedDir,
 		DataDir:    dataDir,
 		PollDelay:  10 * time.Millisecond,
-		Checker:    backend,
-		Seeder:     backend,
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg) }()
+	go func() { done <- Run(ctx, cfg, backend) }()
 
 	// Slapd is unhealthy — should not have seeded yet.
 	time.Sleep(50 * time.Millisecond)
@@ -124,12 +120,10 @@ func (s *Unittest) TestRun_CancelStopsRun() {
 		SeedDir:    seedDir,
 		DataDir:    dataDir,
 		PollDelay:  10 * time.Millisecond,
-		Checker:    backend,
-		Seeder:     backend,
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg) }()
+	go func() { done <- Run(ctx, cfg, backend) }()
 
 	// Cancel immediately — slapd is unhealthy so Run is stuck in waitForSlapd.
 	cancel()
@@ -152,28 +146,21 @@ func (s *Unittest) TestRun_HealthEndpointServes() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Use port 0 for OS-assigned free port. We'll discover it via the listener.
 	cfg := Config{
 		HealthAddr: "127.0.0.1:0",
 		SeedDir:    seedDir,
 		DataDir:    dataDir,
 		PollDelay:  10 * time.Millisecond,
-		Checker:    backend,
-		Seeder:     backend,
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg) }()
+	go func() { done <- Run(ctx, cfg, backend) }()
 
 	// Wait for seed to finish, proving the server started.
 	s.Require().Eventually(func() bool {
 		_, err := os.Stat(filepath.Join(dataDir, sentinelFile))
 		return err == nil
 	}, 2*time.Second, 10*time.Millisecond)
-
-	// Note: we can't easily test the HTTP server at port :0 since we don't
-	// capture the actual listening address. This is tested via health_test.go
-	// using httptest. Here we verify the sidecar lifecycle completes correctly.
 
 	cancel()
 
@@ -220,11 +207,9 @@ objectClass: top
 		SeedDir:    seedDir,
 		DataDir:    dataDir,
 		PollDelay:  10 * time.Millisecond,
-		Checker:    backend,
-		Seeder:     backend,
 	}
 
-	err := Run(ctx, cfg)
+	err := Run(ctx, cfg, backend)
 	s.Require().Error(err)
 	s.Require().Contains(err.Error(), "ldap: connection refused")
 }

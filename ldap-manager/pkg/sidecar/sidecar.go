@@ -1,3 +1,4 @@
+// Package sidecar implements the ldap-manager sidecar logic: health checks and LDAP seeding.
 package sidecar
 
 import (
@@ -9,20 +10,23 @@ import (
 	"time"
 )
 
-// Config holds the sidecar runtime configuration and dependencies.
+// Backend provides LDAP health checking and seeding operations.
+type Backend interface {
+	Check(ctx context.Context) error
+	Add(dn string, attrs map[string][]string) error
+}
+
+// Config holds the sidecar runtime configuration.
 type Config struct {
 	HealthAddr string
 	SeedDir    string
 	DataDir    string
 	PollDelay  time.Duration
-
-	Checker LDAPChecker
-	Seeder  LDAPSeeder
 }
 
 // Run starts the sidecar. Blocks until ctx is cancelled.
-func Run(ctx context.Context, cfg Config) error {
-	srv := newHealthServer(cfg.HealthAddr, cfg.Checker)
+func Run(ctx context.Context, cfg Config, backend Backend) error {
+	srv := newHealthServer(cfg.HealthAddr, backend)
 
 	go func() {
 		slog.Info("starting health server", "addr", cfg.HealthAddr)
@@ -31,11 +35,11 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 	}()
 
-	if err := waitForSlapd(ctx, cfg.Checker, cfg.PollDelay); err != nil {
+	if err := waitForSlapd(ctx, backend, cfg.PollDelay); err != nil {
 		return fmt.Errorf("waiting for slapd: %w", err)
 	}
 
-	if err := seed(cfg.Seeder, cfg.SeedDir, cfg.DataDir); err != nil {
+	if err := seed(backend, cfg.SeedDir, cfg.DataDir); err != nil {
 		return fmt.Errorf("seeding: %w", err)
 	}
 
@@ -52,9 +56,9 @@ func Run(ctx context.Context, cfg Config) error {
 	return nil
 }
 
-func waitForSlapd(ctx context.Context, checker LDAPChecker, delay time.Duration) error {
+func waitForSlapd(ctx context.Context, backend Backend, delay time.Duration) error {
 	for {
-		if err := checker.Check(ctx); err == nil {
+		if err := backend.Check(ctx); err == nil {
 			slog.Info("slapd is reachable")
 			return nil
 		}

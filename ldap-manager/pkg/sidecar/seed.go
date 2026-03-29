@@ -12,14 +12,9 @@ import (
 
 const sentinelFile = ".initialized"
 
-// LDAPSeeder loads LDIF entries into slapd.
-type LDAPSeeder interface {
-	Add(dn string, attrs map[string][]string) error
-}
-
 // seed loads LDIF files from seedDir into slapd.
 // Skips seeding if a sentinel file exists at <dataDir>/.initialized.
-func seed(seeder LDAPSeeder, seedDir, dataDir string) error {
+func seed(backend Backend, seedDir, dataDir string) error {
 	sentinel := filepath.Join(dataDir, sentinelFile)
 	if _, err := os.Stat(sentinel); err == nil {
 		slog.Info("sentinel exists, skipping seed", "path", sentinel)
@@ -33,7 +28,7 @@ func seed(seeder LDAPSeeder, seedDir, dataDir string) error {
 
 	for _, entry := range entries {
 		slog.Info("seeding entry", "dn", entry.dn)
-		if err := seeder.Add(entry.dn, entry.attrs); err != nil {
+		if err := backend.Add(entry.dn, entry.attrs); err != nil {
 			return fmt.Errorf("adding %s: %w", entry.dn, err)
 		}
 	}
