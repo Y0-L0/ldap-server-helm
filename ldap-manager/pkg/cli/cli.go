@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,22 +12,13 @@ import (
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
-// App holds the injected run functions for each subcommand.
-type App struct {
-	RunInit    func(initpkg.Config) error
-	RunSidecar func(sidecar.Config, ldapConfig) error
-}
-
-// NewApp returns the production App wiring.
-func NewApp() App {
-	return App{
-		RunInit:    initpkg.Run,
-		RunSidecar: runSidecar,
-	}
-}
+type (
+	initFunc    func(initpkg.Config) error
+	sidecarFunc func(sidecar.Config, ldapConfig) error
+)
 
 // Main runs the ldap-manager CLI. Returns an exit code.
-func Main(args []string, stderr io.Writer, app App) int {
+func Main(args []string, stderr io.Writer, runInit initFunc, runSidecar sidecarFunc) int {
 	setupLogging()
 
 	if len(args) < 2 {
@@ -43,10 +35,10 @@ func Main(args []string, stderr io.Writer, app App) int {
 		if parseErr != nil {
 			err = parseErr
 		} else {
-			err = app.RunInit(cfg)
+			err = runInit(cfg)
 		}
 	case "sidecar":
-		err = app.RunSidecar(parseSidecarConfig(), parseLDAPConfig())
+		err = runSidecar(parseSidecarConfig(), parseLDAPConfig())
 	default:
 		fmt.Fprintf(stderr, "unknown command: %s\n", cmd)
 		return 1
@@ -65,4 +57,19 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+var errMissingAdminPW = errors.New("LDAP_ADMIN_PW is required")
+
+func parseInitConfig() (initpkg.Config, error) {
+	adminPW := os.Getenv("LDAP_ADMIN_PW")
+	if adminPW == "" {
+		return initpkg.Config{}, errMissingAdminPW
+	}
+	return initpkg.Config{
+		DataDir:    envOrDefault("LDAP_DATA_DIR", "/var/lib/ldap"),
+		RunDir:     envOrDefault("LDAP_RUN_DIR", "/var/run/slapd"),
+		RootpwPath: envOrDefault("LDAP_ROOTPW_PATH", "/etc/ldap/rootpw.conf"),
+		AdminPW:    adminPW,
+	}, nil
 }

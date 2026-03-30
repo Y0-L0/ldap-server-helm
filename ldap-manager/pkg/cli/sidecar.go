@@ -35,7 +35,7 @@ func parseSidecarConfig() sidecar.Config {
 	}
 }
 
-func runSidecar(cfg sidecar.Config, lcfg ldapConfig) error {
+func RunSidecar(cfg sidecar.Config, lcfg ldapConfig) error {
 	backend := &ldapadapter.RealLDAP{
 		URI:    lcfg.uri,
 		BindDN: lcfg.bindDN,
