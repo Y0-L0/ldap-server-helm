@@ -96,7 +96,16 @@ func (s *E2E) SetupSuite() {
 	seedPath := filepath.Join(s.seedDir, "seed.ldif")
 	s.Require().NoError(os.WriteFile(seedPath, seedData, 0o600)) //nolint:gosec // test path, not user input
 
-	// Step 4: find a free port and start slapd
+	// Step 4: offline-load seed data before slapd starts (same as vanilla entrypoint)
+	slapadd := exec.CommandContext(context.Background(), "slapadd",
+		"-f", confPath,
+		"-l", seedPath,
+		"-c",
+	)
+	out, err := slapadd.CombinedOutput()
+	s.Require().NoError(err, "slapadd: %s", string(out))
+
+	// Step 5: find a free port and start slapd
 	port := freePort(s.T())
 	s.ldapURI = fmt.Sprintf("ldap://127.0.0.1:%d", port)
 
@@ -110,7 +119,7 @@ func (s *E2E) SetupSuite() {
 	s.slapd.Stderr = os.Stderr
 	s.Require().NoError(s.slapd.Start(), "slapd start")
 
-	// Step 5: wait for slapd readiness
+	// Step 6: wait for slapd readiness
 	s.backend = &ldapadapter.RealLDAP{
 		URI:    s.ldapURI,
 		BindDN: adminDN,
