@@ -8,3 +8,13 @@ RUN CGO_ENABLED=0 go build -o /ldap-manager ./cmd/ldap-manager
 FROM scratch
 COPY --from=builder /ldap-manager /ldap-manager
 ENTRYPOINT ["/ldap-manager"]
+
+FROM builder AS e2e-builder
+RUN CGO_ENABLED=0 go test -c -o /e2e.test ./test/e2e/
+
+FROM artifacts.software-univention.de/nubus/images/ldap-server:0.47.13 AS e2e
+COPY --from=e2e-builder /e2e.test /e2e/e2e.test
+COPY test/e2e/testdata/ /e2e/testdata/
+WORKDIR /e2e
+ENV INTEGRATION=1
+ENTRYPOINT ["./e2e.test", "-test.v"]
