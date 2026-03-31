@@ -1,7 +1,7 @@
 ---
 slapdConf:
-  existingConfigMap: ""
-  content: ""
+  existingConfigMap: null
+  content: null
   file: files/slapd.conf
 
 ldapServer:
@@ -11,7 +11,7 @@ ldapServer:
 
   auth:
     password: admin
-    existingSecret: ""
+    existingSecret: null
 
   image:
     repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-server
@@ -31,7 +31,7 @@ ldapManager:
 persistence:
   enabled: true
   size: 1Gi
-  storageClass: ""
+  storageClass: null
 
 service:
   type: ClusterIP
@@ -39,13 +39,14 @@ service:
     ldap: 389
 
 seedData:
-  enabled: false
-  ldif: ""
+  existingConfigMap: null
+  content: null
+  file: ""
 
 additionalAnnotations: {}
 additionalLabels: {}
-fullnameOverride: ""
-nameOverride: ""
+fullnameOverride: null
+nameOverride: null
 nodeSelector: {}
 tolerations: []
 topologySpreadConstraints: []

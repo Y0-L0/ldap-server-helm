@@ -8,17 +8,15 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: renders when seedData is enabled
+  - it: renders from inline content
     set:
-      seedData:
-        enabled: true
-        ldif: |
-          dn: dc=example,dc=org
-          objectClass: top
-          objectClass: dcObject
-          objectClass: organization
-          o: Example
-          dc: example
+      seedData.content: |
+        dn: dc=example,dc=org
+        objectClass: top
+        objectClass: dcObject
+        objectClass: organization
+        o: Example
+        dc: example
     asserts:
       - isKind:
           of: ConfigMap
@@ -28,4 +26,22 @@ tests:
       - matchRegex:
           path: data["seed.ldif"]
           pattern: dc=example,dc=org
+
+  - it: does not render when existingConfigMap is set
+    set:
+      seedData.existingConfigMap: my-seed-config
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: templates content through tpl
+    set:
+      ldapServer.config.ldapBaseDn: dc=test,dc=org
+      seedData.content: |
+        dn: {{ .Values.ldapServer.config.ldapBaseDn }}
+        objectClass: top
+    asserts:
+      - matchRegex:
+          path: data["seed.ldif"]
+          pattern: "dn: dc=test,dc=org"
 ...

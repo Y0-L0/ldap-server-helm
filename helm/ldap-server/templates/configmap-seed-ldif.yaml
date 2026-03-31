@@ -1,4 +1,5 @@
-{{ if .Values.seedData.enabled }}
+{{ if not .Values.seedData.existingConfigMap }}
+{{ if or .Values.seedData.content .Values.seedData.file }}
 ---
 {
   apiVersion: "v1",
@@ -13,7 +14,8 @@
     },
   },
   data: {
-    seed.ldif: {{ .Values.seedData.ldif | quote }},
+    seed.ldif: {{ tpl (coalesce .Values.seedData.content (.Files.Get .Values.seedData.file)) . | quote }},
   },
 }
+{{ end }}
 {{ end }}

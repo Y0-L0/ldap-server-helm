@@ -108,7 +108,7 @@
             },
             volumeMounts: [
               {name: "data", mountPath: "/var/lib/ldap"},
-              {{ if .Values.seedData.enabled }}
+              {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
               {name: "seed-ldif", mountPath: "/seed"},
               {{ end }}
             ],
@@ -118,8 +118,8 @@
           {name: "run", emptyDir: {}},
           {name: "etc-ldap", emptyDir: {}},
           {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" .Release.Name | quote }}{{ end }}}},
-          {{ if .Values.seedData.enabled }}
-          {name: "seed-ldif", configMap: {name: {{ printf "%s-seed-ldif" .Release.Name | quote }}}},
+          {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
+          {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" .Release.Name | quote }}{{ end }}}},
           {{ end }}
           {{ if not .Values.persistence.enabled }}
           {name: "data", emptyDir: {}},
