@@ -1,0 +1,82 @@
+---
+suite: statefulset
+templates:
+  - templates/statefulset.yaml
+tests:
+  - it: renders a StatefulSet
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.serviceName
+          value: RELEASE-NAME
+
+  - it: has an init container for ldap-manager
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: ldap-manager-init
+      - equal:
+          path: spec.template.spec.initContainers[0].args[0]
+          value: init
+
+  - it: runs slapd with explicit command
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: slapd
+      - equal:
+          path: spec.template.spec.containers[0].command[0]
+          value: slapd
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: /etc/ldap/slapd.conf
+
+  - it: has a sidecar for ldap-manager
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: ldap-manager-sidecar
+      - equal:
+          path: spec.template.spec.containers[1].args[0]
+          value: sidecar
+
+  - it: configures health probes on the sidecar
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.path
+          value: /healthz
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.httpGet.path
+          value: /readyz
+
+  - it: uses secret for admin password in init container
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].env[0].valueFrom.secretKeyRef.name
+          value: RELEASE-NAME-admin
+
+  - it: uses existingSecret when set
+    set:
+      ldapServer.auth.existingSecret: my-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].env[0].valueFrom.secretKeyRef.name
+          value: my-secret
+
+  - it: includes PVC template when persistence enabled
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: data
+
+  - it: uses emptyDir when persistence disabled
+    set:
+      persistence.enabled: false
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+...

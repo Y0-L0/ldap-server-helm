@@ -1,0 +1,158 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "StatefulSet",
+  "metadata": {
+    "name": {{ .Release.Name | quote }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Chart.Name | quote }},
+      "app.kubernetes.io/instance": {{ .Release.Name | quote }},
+      "app.kubernetes.io/version": {{ .Chart.AppVersion | quote }},
+      "app.kubernetes.io/managed-by": {{ .Release.Service | quote }}
+    }
+  },
+  "spec": {
+    "serviceName": {{ .Release.Name | quote }},
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": {{ .Chart.Name | quote }},
+        "app.kubernetes.io/instance": {{ .Release.Name | quote }}
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": {{ .Chart.Name | quote }},
+          "app.kubernetes.io/instance": {{ .Release.Name | quote }}
+        }
+      },
+      "spec": {
+        "initContainers": [
+          {
+            "name": "ldap-manager-init",
+            "image": {{ printf "%s:%s" .Values.ldapManager.image.repository .Values.ldapManager.image.tag | quote }},
+            "imagePullPolicy": {{ .Values.ldapManager.image.pullPolicy | quote }},
+            "args": ["init"],
+            "env": [
+              {
+                "name": "LDAP_ADMIN_PW",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" .Release.Name | quote }}{{ end }},
+                    "key": "password"
+                  }
+                }
+              }
+            ],
+            "volumeMounts": [
+              {"name": "data", "mountPath": "/var/lib/ldap"},
+              {"name": "run", "mountPath": "/var/run/slapd"},
+              {"name": "etc-ldap", "mountPath": "/etc/ldap"}
+            ]
+          }
+        ],
+        "containers": [
+          {
+            "name": "slapd",
+            "image": {{ printf "%s:%s" .Values.ldapServer.image.repository .Values.ldapServer.image.tag | quote }},
+            "imagePullPolicy": {{ .Values.ldapServer.image.pullPolicy | quote }},
+            "command": ["slapd"],
+            "args": [
+              "-f", "/etc/ldap/slapd.conf",
+              "-d", {{ .Values.ldapServer.config.logLevel | quote }},
+              "-h", "ldap://:389/ ldapi:///"
+            ],
+            "ports": [
+              {"name": "ldap", "containerPort": 389, "protocol": "TCP"}
+            ],
+            "volumeMounts": [
+              {"name": "data", "mountPath": "/var/lib/ldap"},
+              {"name": "run", "mountPath": "/var/run/slapd"},
+              {"name": "etc-ldap", "mountPath": "/etc/ldap"},
+              {"name": "slapd-conf", "mountPath": "/etc/ldap/slapd.conf", "subPath": "slapd.conf"}
+            ]
+          },
+          {
+            "name": "ldap-manager-sidecar",
+            "image": {{ printf "%s:%s" .Values.ldapManager.image.repository .Values.ldapManager.image.tag | quote }},
+            "imagePullPolicy": {{ .Values.ldapManager.image.pullPolicy | quote }},
+            "args": ["sidecar"],
+            "env": [
+              {
+                "name": "LDAP_ADMIN_PW",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" .Release.Name | quote }}{{ end }},
+                    "key": "password"
+                  }
+                }
+              },
+              {
+                "name": "LDAP_BASE_DN",
+                "value": {{ .Values.ldapServer.config.ldapBaseDn | quote }}
+              }
+            ],
+            "ports": [
+              {"name": "health", "containerPort": 8080, "protocol": "TCP"}
+            ],
+            "livenessProbe": {
+              "httpGet": {"path": "/healthz", "port": "health"},
+              "initialDelaySeconds": 5,
+              "periodSeconds": 10
+            },
+            "readinessProbe": {
+              "httpGet": {"path": "/readyz", "port": "health"},
+              "initialDelaySeconds": 5,
+              "periodSeconds": 10
+            },
+            "volumeMounts": {{ include "sidecar.volumeMounts" . }}
+          }
+        ],
+        "volumes": {{ include "pod.volumes" . }},
+        "nodeSelector": {{ .Values.nodeSelector | toJson }},
+        "tolerations": {{ .Values.tolerations | toJson }}
+      }
+    }
+    {{ if .Values.persistence.enabled }},
+    "volumeClaimTemplates": [
+      {
+        "metadata": {"name": "data"},
+        "spec": {
+          "accessModes": ["ReadWriteOnce"],
+          {{ if .Values.persistence.storageClass }}
+          "storageClassName": {{ .Values.persistence.storageClass | quote }},
+          {{ end }}
+          "resources": {
+            "requests": {
+              "storage": {{ .Values.persistence.size | quote }}
+            }
+          }
+        }
+      }
+    ]
+    {{ end }}
+  }
+}
+
+{{ define "sidecar.volumeMounts" }}
+{{ $mounts := list (dict "name" "data" "mountPath" "/var/lib/ldap") }}
+{{ if .Values.seedData.enabled }}
+{{ $mounts = append $mounts (dict "name" "seed-ldif" "mountPath" "/seed") }}
+{{ end }}
+{{ $mounts | toJson }}
+{{ end }}
+
+{{ define "pod.volumes" }}
+{{ $vols := list
+  (dict "name" "run" "emptyDir" (dict))
+  (dict "name" "etc-ldap" "emptyDir" (dict))
+  (dict "name" "slapd-conf" "configMap" (dict "name" (printf "%s-slapd-conf" .Release.Name)))
+}}
+{{ if .Values.seedData.enabled }}
+{{ $vols = append $vols (dict "name" "seed-ldif" "configMap" (dict "name" (printf "%s-seed-ldif" .Release.Name))) }}
+{{ end }}
+{{ if not .Values.persistence.enabled }}
+{{ $vols = append $vols (dict "name" "data" "emptyDir" (dict)) }}
+{{ end }}
+{{ $vols | toJson }}
+{{ end }}
