@@ -3,7 +3,7 @@ suite: configmap-slapd-conf
 templates:
   - templates/configmap-slapd-conf.yaml
 tests:
-  - it: renders a ConfigMap
+  - it: renders a ConfigMap from default file
     asserts:
       - isKind:
           of: ConfigMap
@@ -11,14 +11,11 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-slapd-conf
 
-  - it: contains the base DN in slapd.conf
+  - it: templates base DN from the file
     asserts:
       - matchRegex:
           path: data["slapd.conf"]
           pattern: suffix\s+"dc=example,dc=org"
-
-  - it: contains rootdn with base DN
-    asserts:
       - matchRegex:
           path: data["slapd.conf"]
           pattern: rootdn\s+"cn=admin,dc=example,dc=org"
@@ -39,4 +36,21 @@ tests:
       - matchRegex:
           path: data["slapd.conf"]
           pattern: rootdn\s+"cn=admin,dc=test,dc=net"
+
+  - it: uses inline content when set
+    set:
+      slapdConf.content: |
+        database mdb
+        suffix "dc=inline,dc=org"
+    asserts:
+      - matchRegex:
+          path: data["slapd.conf"]
+          pattern: suffix "dc=inline,dc=org"
+
+  - it: does not render when existingConfigMap is set
+    set:
+      slapdConf.existingConfigMap: my-slapd-config
+    asserts:
+      - hasDocuments:
+          count: 0
 ...

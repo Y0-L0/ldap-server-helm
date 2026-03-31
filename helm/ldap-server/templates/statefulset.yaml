@@ -106,10 +106,25 @@
               initialDelaySeconds: 5,
               periodSeconds: 10,
             },
-            volumeMounts: {{ include "sidecar.volumeMounts" . }},
+            volumeMounts: [
+              {name: "data", mountPath: "/var/lib/ldap"},
+              {{ if .Values.seedData.enabled }}
+              {name: "seed-ldif", mountPath: "/seed"},
+              {{ end }}
+            ],
           },
         ],
-        volumes: {{ include "pod.volumes" . }},
+        volumes: [
+          {name: "run", emptyDir: {}},
+          {name: "etc-ldap", emptyDir: {}},
+          {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" .Release.Name | quote }}{{ end }}}},
+          {{ if .Values.seedData.enabled }}
+          {name: "seed-ldif", configMap: {name: {{ printf "%s-seed-ldif" .Release.Name | quote }}}},
+          {{ end }}
+          {{ if not .Values.persistence.enabled }}
+          {name: "data", emptyDir: {}},
+          {{ end }}
+        ],
         nodeSelector: {{ .Values.nodeSelector | toJson }},
         tolerations: {{ .Values.tolerations | toJson }},
       },
@@ -132,26 +147,3 @@
     {{ end }}
   },
 }
-
-{{ define "sidecar.volumeMounts" }}
-{{ $mounts := list (dict "name" "data" "mountPath" "/var/lib/ldap") }}
-{{ if .Values.seedData.enabled }}
-{{ $mounts = append $mounts (dict "name" "seed-ldif" "mountPath" "/seed") }}
-{{ end }}
-{{ $mounts | toJson }}
-{{ end }}
-
-{{ define "pod.volumes" }}
-{{ $vols := list
-  (dict "name" "run" "emptyDir" (dict))
-  (dict "name" "etc-ldap" "emptyDir" (dict))
-  (dict "name" "slapd-conf" "configMap" (dict "name" (printf "%s-slapd-conf" .Release.Name)))
-}}
-{{ if .Values.seedData.enabled }}
-{{ $vols = append $vols (dict "name" "seed-ldif" "configMap" (dict "name" (printf "%s-seed-ldif" .Release.Name))) }}
-{{ end }}
-{{ if not .Values.persistence.enabled }}
-{{ $vols = append $vols (dict "name" "data" "emptyDir" (dict)) }}
-{{ end }}
-{{ $vols | toJson }}
-{{ end }}

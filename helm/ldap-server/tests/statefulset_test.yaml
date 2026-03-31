@@ -79,4 +79,15 @@ tests:
     asserts:
       - notExists:
           path: spec.volumeClaimTemplates
+
+  - it: uses existingConfigMap for slapd-conf volume
+    set:
+      slapdConf.existingConfigMap: my-slapd-config
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: slapd-conf
+            configMap:
+              name: my-slapd-config
 ...

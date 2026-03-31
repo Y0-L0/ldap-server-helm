@@ -1,4 +1,7 @@
 ---
+slapdConf:
+  file: files/slapd.conf
+
 ldapServer:
   config:
     ldapBaseDn: dc=example,dc=org
