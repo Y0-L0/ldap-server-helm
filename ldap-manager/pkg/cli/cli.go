@@ -69,7 +69,7 @@ func parseInitConfig() (initpkg.Config, error) {
 	return initpkg.Config{
 		DataDir:    envOrDefault("LDAP_DATA_DIR", "/var/lib/ldap"),
 		RunDir:     envOrDefault("LDAP_RUN_DIR", "/var/run/slapd"),
-		RootpwPath: envOrDefault("LDAP_ROOTPW_PATH", "/etc/ldap/rootpw.conf"),
+		RootpwPath: envOrDefault("LDAP_ROOTPW_PATH", "/etc/ldap/auth/rootpw.conf"),
 		AdminPW:    adminPW,
 	}, nil
 }

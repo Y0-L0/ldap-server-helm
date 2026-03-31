@@ -20,7 +20,7 @@ type ldapConfig struct {
 func parseLDAPConfig() ldapConfig {
 	baseDN := os.Getenv("LDAP_BASE_DN")
 	return ldapConfig{
-		uri:    envOrDefault("LDAP_URI", "ldapi:///"),
+		uri:    envOrDefault("LDAP_URI", "ldap://localhost:389/"),
 		bindDN: envOrDefault("LDAP_BIND_DN", "cn=admin,"+baseDN),
 		bindPW: os.Getenv("LDAP_ADMIN_PW"),
 	}

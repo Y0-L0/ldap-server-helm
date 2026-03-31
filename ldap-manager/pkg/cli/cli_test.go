@@ -75,7 +75,7 @@ func (s *Unittest) TestMain_InitDefaults() {
 	s.Require().Equal(0, code)
 	s.Require().Equal("/var/lib/ldap", got.DataDir)
 	s.Require().Equal("/var/run/slapd", got.RunDir)
-	s.Require().Equal("/etc/ldap/rootpw.conf", got.RootpwPath)
+	s.Require().Equal("/etc/ldap/auth/rootpw.conf", got.RootpwPath)
 	s.Require().Equal("secret", got.AdminPW)
 }
 
@@ -121,7 +121,7 @@ func (s *Unittest) TestMain_SidecarDefaults() {
 	s.Require().Equal(":8080", gotCfg.HealthAddr)
 	s.Require().Equal("/seed", gotCfg.SeedDir)
 	s.Require().Equal("/var/lib/ldap", gotCfg.DataDir)
-	s.Require().Equal("ldapi:///", gotLDAP.uri)
+	s.Require().Equal("ldap://localhost:389/", gotLDAP.uri)
 	s.Require().Equal("cn=admin,", gotLDAP.bindDN)
 	s.Require().Empty(gotLDAP.bindPW)
 }

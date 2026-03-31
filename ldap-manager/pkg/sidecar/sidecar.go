@@ -43,7 +43,7 @@ func Run(ctx context.Context, cfg Config, backend Backend) error {
 		return fmt.Errorf("seeding: %w", err)
 	}
 
-	slog.Info("sidecar ready, blocking until context cancelled")
+	slog.Info("health check API running", "addr", cfg.HealthAddr)
 	<-ctx.Done()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

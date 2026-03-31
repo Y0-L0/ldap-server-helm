@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -11,6 +12,7 @@ func newHealthServer(addr string, backend Backend) *http.Server {
 
 	check := func(w http.ResponseWriter, r *http.Request) {
 		if err := backend.Check(r.Context()); err != nil {
+			slog.Warn("health check failed", "error", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
