@@ -4,7 +4,8 @@ version: 0
 charts:
   helm/ldap-server:
     valuesFiles:
-      - linter_values.yaml
+      - helm/ldap-server/linter_values.yaml
     ignore:
-      - .global
+      - .slapdConf.file
+      - .seedData.file
 ...

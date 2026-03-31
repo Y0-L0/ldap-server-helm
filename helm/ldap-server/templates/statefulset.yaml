@@ -3,28 +3,34 @@
   apiVersion: "apps/v1",
   kind: "StatefulSet",
   metadata: {
-    name: {{ .Release.Name | quote }},
+    name: {{ coalesce .Values.fullnameOverride .Release.Name | quote }},
     labels: {
-      app.kubernetes.io/name: {{ .Chart.Name | quote }},
+      app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
       app.kubernetes.io/instance: {{ .Release.Name | quote }},
       app.kubernetes.io/version: {{ .Chart.AppVersion | quote }},
       app.kubernetes.io/managed-by: {{ .Release.Service | quote }},
     },
+    {{ if .Values.additionalAnnotations }}
+    annotations: {{ .Values.additionalAnnotations | toJson }},
+    {{ end }}
   },
   spec: {
-    serviceName: {{ .Release.Name | quote }},
+    serviceName: {{ coalesce .Values.fullnameOverride .Release.Name | quote }},
     replicas: 1,
     selector: {
       matchLabels: {
-        app.kubernetes.io/name: {{ .Chart.Name | quote }},
+        app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
         app.kubernetes.io/instance: {{ .Release.Name | quote }},
       },
     },
     template: {
       metadata: {
         labels: {
-          app.kubernetes.io/name: {{ .Chart.Name | quote }},
+          app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
           app.kubernetes.io/instance: {{ .Release.Name | quote }},
+          {{ range $k, $v := .Values.additionalLabels }}
+          {{ $k | quote }}: {{ $v | quote }},
+          {{ end }}
         },
       },
       spec: {
@@ -37,11 +43,14 @@
             name: "LDAP_ADMIN_PW",
             valueFrom: {
               secretKeyRef: {
-                name: {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" .Release.Name | quote }}{{ end }},
+                name: {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }},
                 key: "password",
               },
             },
           }],
+          {{ if .Values.ldapManager.resources }}
+          resources: {{ .Values.ldapManager.resources | toJson }},
+          {{ end }}
           volumeMounts: [
             {name: "data", mountPath: "/var/lib/ldap"},
             {name: "run", mountPath: "/var/run/slapd"},
@@ -64,6 +73,9 @@
               containerPort: 389,
               protocol: "TCP",
             }],
+            {{ if .Values.ldapServer.resources }}
+            resources: {{ .Values.ldapServer.resources | toJson }},
+            {{ end }}
             volumeMounts: [
               {name: "data", mountPath: "/var/lib/ldap"},
               {name: "run", mountPath: "/var/run/slapd"},
@@ -81,7 +93,7 @@
                 name: "LDAP_ADMIN_PW",
                 valueFrom: {
                   secretKeyRef: {
-                    name: {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" .Release.Name | quote }}{{ end }},
+                    name: {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }},
                     key: "password",
                   },
                 },
@@ -106,6 +118,9 @@
               initialDelaySeconds: 5,
               periodSeconds: 10,
             },
+            {{ if .Values.ldapManager.resources }}
+            resources: {{ .Values.ldapManager.resources | toJson }},
+            {{ end }}
             volumeMounts: [
               {name: "data", mountPath: "/var/lib/ldap"},
               {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
@@ -117,9 +132,9 @@
         volumes: [
           {name: "run", emptyDir: {}},
           {name: "etc-ldap", emptyDir: {}},
-          {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" .Release.Name | quote }}{{ end }}}},
+          {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }}}},
           {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
-          {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" .Release.Name | quote }}{{ end }}}},
+          {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }}}},
           {{ end }}
           {{ if not .Values.persistence.enabled }}
           {name: "data", emptyDir: {}},
@@ -127,6 +142,9 @@
         ],
         nodeSelector: {{ .Values.nodeSelector | toJson }},
         tolerations: {{ .Values.tolerations | toJson }},
+        {{ if .Values.topologySpreadConstraints }}
+        topologySpreadConstraints: {{ .Values.topologySpreadConstraints | toJson }},
+        {{ end }}
       },
     },
     {{ if .Values.persistence.enabled }}

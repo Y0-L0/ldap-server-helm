@@ -5,13 +5,16 @@
   apiVersion: "v1",
   kind: "ConfigMap",
   metadata: {
-    name: {{ printf "%s-seed-ldif" .Release.Name | quote }},
+    name: {{ printf "%s-seed-ldif" (coalesce .Values.fullnameOverride .Release.Name) | quote }},
     labels: {
-      app.kubernetes.io/name: {{ .Chart.Name | quote }},
+      app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
       app.kubernetes.io/instance: {{ .Release.Name | quote }},
       app.kubernetes.io/version: {{ .Chart.AppVersion | quote }},
       app.kubernetes.io/managed-by: {{ .Release.Service | quote }},
     },
+    {{ if .Values.additionalAnnotations }}
+    annotations: {{ .Values.additionalAnnotations | toJson }},
+    {{ end }}
   },
   data: {
     seed.ldif: {{ tpl (coalesce .Values.seedData.content (.Files.Get .Values.seedData.file)) . | quote }},
