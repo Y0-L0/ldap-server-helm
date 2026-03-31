@@ -3,48 +3,34 @@
   apiVersion: "apps/v1",
   kind: "StatefulSet",
   metadata: {
-    name: {{ coalesce .Values.fullnameOverride .Release.Name | quote }},
-    labels: {
-      app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
-      app.kubernetes.io/instance: {{ .Release.Name | quote }},
-      app.kubernetes.io/version: {{ .Chart.AppVersion | quote }},
-      app.kubernetes.io/managed-by: {{ .Release.Service | quote }},
-    },
+    name: {{ include "common.names.fullname" . | quote }},
+    labels: {{ include "common.labels.standard" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
     {{ if .Values.additionalAnnotations }}
     annotations: {{ .Values.additionalAnnotations | toJson }},
     {{ end }}
   },
   spec: {
-    serviceName: {{ coalesce .Values.fullnameOverride .Release.Name | quote }},
+    serviceName: {{ include "common.names.fullname" . | quote }},
     replicas: 1,
     selector: {
-      matchLabels: {
-        app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
-        app.kubernetes.io/instance: {{ .Release.Name | quote }},
-      },
+      matchLabels: {{ include "common.labels.matchLabels" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
     },
     template: {
       metadata: {
-        labels: {
-          app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
-          app.kubernetes.io/instance: {{ .Release.Name | quote }},
-          {{ range $k, $v := .Values.additionalLabels }}
-          {{ $k | quote }}: {{ $v | quote }},
-          {{ end }}
-        },
+        labels: {{ include "common.labels.standard" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
       },
       spec: {
         initContainers: [{
           name: "ldap-manager-init",
-          image: {{ printf "%s:%s" .Values.ldapManager.image.repository .Values.ldapManager.image.tag | quote }},
-          imagePullPolicy: {{ .Values.ldapManager.image.pullPolicy | quote }},
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.ldapManager.image "global" .Values.global "chart" .Chart) | quote }},
+          imagePullPolicy: {{ coalesce .Values.ldapManager.image.pullPolicy ((.Values.global).imagePullPolicy) "IfNotPresent" | quote }},
           args: ["init"],
           env: [{
             name: "LDAP_ADMIN_PW",
             valueFrom: {
               secretKeyRef: {
-                name: {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }},
-                key: "password",
+                name: {{ include "nubus-common.secrets.name" (dict "existingSecret" .Values.ldapServer.auth.existingSecret "defaultNameSuffix" "admin" "context" .) | quote }},
+                key: {{ include "nubus-common.secrets.key" (dict "existingSecret" .Values.ldapServer.auth.existingSecret "key" "password" "context" .) | quote }},
               },
             },
           }],
@@ -60,8 +46,8 @@
         containers: [
           {
             name: "slapd",
-            image: {{ printf "%s:%s" .Values.ldapServer.image.repository .Values.ldapServer.image.tag | quote }},
-            imagePullPolicy: {{ .Values.ldapServer.image.pullPolicy | quote }},
+            image: {{ include "common.images.image" (dict "imageRoot" .Values.ldapServer.image "global" .Values.global "chart" .Chart) | quote }},
+            imagePullPolicy: {{ coalesce .Values.ldapServer.image.pullPolicy ((.Values.global).imagePullPolicy) "IfNotPresent" | quote }},
             command: ["slapd"],
             args: [
               "-f", "/etc/ldap/slapd.conf",
@@ -85,16 +71,16 @@
           },
           {
             name: "ldap-manager-sidecar",
-            image: {{ printf "%s:%s" .Values.ldapManager.image.repository .Values.ldapManager.image.tag | quote }},
-            imagePullPolicy: {{ .Values.ldapManager.image.pullPolicy | quote }},
+            image: {{ include "common.images.image" (dict "imageRoot" .Values.ldapManager.image "global" .Values.global "chart" .Chart) | quote }},
+            imagePullPolicy: {{ coalesce .Values.ldapManager.image.pullPolicy ((.Values.global).imagePullPolicy) "IfNotPresent" | quote }},
             args: ["sidecar"],
             env: [
               {
                 name: "LDAP_ADMIN_PW",
                 valueFrom: {
                   secretKeyRef: {
-                    name: {{ if .Values.ldapServer.auth.existingSecret }}{{ .Values.ldapServer.auth.existingSecret | quote }}{{ else }}{{ printf "%s-admin" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }},
-                    key: "password",
+                    name: {{ include "nubus-common.secrets.name" (dict "existingSecret" .Values.ldapServer.auth.existingSecret "defaultNameSuffix" "admin" "context" .) | quote }},
+                    key: {{ include "nubus-common.secrets.key" (dict "existingSecret" .Values.ldapServer.auth.existingSecret "key" "password" "context" .) | quote }},
                   },
                 },
               },
@@ -132,9 +118,9 @@
         volumes: [
           {name: "run", emptyDir: {}},
           {name: "etc-ldap", emptyDir: {}},
-          {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }}}},
+          {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" (include "common.names.fullname" .) | quote }}{{ end }}}},
           {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
-          {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" (coalesce .Values.fullnameOverride .Release.Name) | quote }}{{ end }}}},
+          {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" (include "common.names.fullname" .) | quote }}{{ end }}}},
           {{ end }}
           {{ if not .Values.persistence.enabled }}
           {name: "data", emptyDir: {}},

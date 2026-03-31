@@ -3,23 +3,15 @@
   apiVersion: "v1",
   kind: "Service",
   metadata: {
-    name: {{ coalesce .Values.fullnameOverride .Release.Name | quote }},
-    labels: {
-      app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
-      app.kubernetes.io/instance: {{ .Release.Name | quote }},
-      app.kubernetes.io/version: {{ .Chart.AppVersion | quote }},
-      app.kubernetes.io/managed-by: {{ .Release.Service | quote }},
-    },
+    name: {{ include "common.names.fullname" . | quote }},
+    labels: {{ include "common.labels.standard" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
     {{ if .Values.additionalAnnotations }}
     annotations: {{ .Values.additionalAnnotations | toJson }},
     {{ end }}
   },
   spec: {
     type: {{ .Values.service.type | quote }},
-    selector: {
-      app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
-      app.kubernetes.io/instance: {{ .Release.Name | quote }},
-    },
+    selector: {{ include "common.labels.matchLabels" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
     ports: [{
       name: "ldap",
       port: {{ .Values.service.ports.ldap }},

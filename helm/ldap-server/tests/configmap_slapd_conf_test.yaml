@@ -9,7 +9,7 @@ tests:
           of: ConfigMap
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-slapd-conf
+          value: RELEASE-NAME-ldap-server-slapd-conf
 
   - it: templates base DN from the file
     asserts:

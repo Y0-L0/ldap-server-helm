@@ -8,4 +8,5 @@ charts:
     ignore:
       - .slapdConf.file
       - .seedData.file
+      - .additionalLabels
 ...

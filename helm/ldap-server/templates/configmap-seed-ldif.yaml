@@ -5,13 +5,8 @@
   apiVersion: "v1",
   kind: "ConfigMap",
   metadata: {
-    name: {{ printf "%s-seed-ldif" (coalesce .Values.fullnameOverride .Release.Name) | quote }},
-    labels: {
-      app.kubernetes.io/name: {{ coalesce .Values.nameOverride .Chart.Name | quote }},
-      app.kubernetes.io/instance: {{ .Release.Name | quote }},
-      app.kubernetes.io/version: {{ .Chart.AppVersion | quote }},
-      app.kubernetes.io/managed-by: {{ .Release.Service | quote }},
-    },
+    name: {{ printf "%s-seed-ldif" (include "common.names.fullname" .) | quote }},
+    labels: {{ include "common.labels.standard" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
     {{ if .Values.additionalAnnotations }}
     annotations: {{ .Values.additionalAnnotations | toJson }},
     {{ end }}

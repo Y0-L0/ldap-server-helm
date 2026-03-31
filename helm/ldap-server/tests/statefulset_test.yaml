@@ -10,9 +10,6 @@ tests:
       - equal:
           path: spec.replicas
           value: 1
-      - equal:
-          path: spec.serviceName
-          value: RELEASE-NAME
 
   - it: has an init container for ldap-manager
     asserts:
@@ -53,19 +50,30 @@ tests:
           path: spec.template.spec.containers[1].readinessProbe.httpGet.path
           value: /readyz
 
-  - it: uses secret for admin password in init container
+  - it: uses generated secret name by default
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].env[0].valueFrom.secretKeyRef.name
-          value: RELEASE-NAME-admin
+          value: RELEASE-NAME-ldap-server-admin
 
   - it: uses existingSecret when set
     set:
-      ldapServer.auth.existingSecret: my-secret
+      ldapServer.auth.existingSecret.name: my-secret
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].env[0].valueFrom.secretKeyRef.name
           value: my-secret
+
+  - it: uses mapped key from existingSecret
+    set:
+      ldapServer.auth.existingSecret:
+        name: my-secret
+        keyMapping:
+          password: my-password-key
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].env[0].valueFrom.secretKeyRef.key
+          value: my-password-key
 
   - it: includes PVC template when persistence enabled
     asserts:

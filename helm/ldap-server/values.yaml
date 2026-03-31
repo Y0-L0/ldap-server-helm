@@ -1,4 +1,8 @@
 ---
+global:
+  imageRegistry: ""
+  imagePullPolicy: ""
+
 slapdConf:
   existingConfigMap: null
   content: null
@@ -11,19 +15,26 @@ ldapServer:
 
   auth:
     password: admin
-    existingSecret: null
+    existingSecret:
+      name: null
+      keyMapping:
+        password: null
 
   image:
+    registry: ""
     repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-server
     tag: latest
+    digest: ""
     pullPolicy: IfNotPresent
 
   resources: {}
 
 ldapManager:
   image:
+    registry: ""
     repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-manager
     tag: latest
+    digest: ""
     pullPolicy: IfNotPresent
 
   resources: {}
