@@ -1,0 +1,31 @@
+---
+suite: configmap-seed-ldif
+templates:
+  - templates/configmap-seed-ldif.yaml
+tests:
+  - it: does not render by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders when seedData is enabled
+    set:
+      seedData:
+        enabled: true
+        ldif: |
+          dn: dc=example,dc=org
+          objectClass: top
+          objectClass: dcObject
+          objectClass: organization
+          o: Example
+          dc: example
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-seed-ldif
+      - matchRegex:
+          path: data["seed.ldif"]
+          pattern: dc=example,dc=org
+...
