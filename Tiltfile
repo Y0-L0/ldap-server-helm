@@ -11,7 +11,7 @@ helm_resource(
         "--values", "tilt-values.yaml",
     ],
     image_deps=[
-        "gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-manager:latest",
+        "ghcr.io/y0-l0/ldap-server-helm/ldap-manager:latest",
     ],
     image_keys=[
         ("ldapManager.image.registry", "ldapManager.image.repository", "ldapManager.image.tag"),
@@ -19,7 +19,10 @@ helm_resource(
 )
 
 docker_build(
-    "gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-manager:latest",
+    "ghcr.io/y0-l0/ldap-server-helm/ldap-manager:latest",
     "./ldap-manager/",
     dockerfile="./ldap-manager/Dockerfile",
 )
+
+if config.tilt_subcommand == "down" and "-v" in sys.argv:
+    local("kubectl delete pvc data-ldap-server-0 --wait=false --ignore-not-found")
