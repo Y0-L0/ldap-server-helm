@@ -39,7 +39,7 @@ hooks = [
 repo = "https://github.com/y0-l0/helm-snoop"
 rev = "v0.7.0"
 hooks = [
-  { id = "helm-snoop" },
+  { id = "helm-snoop", files = "^helm/" },
 ]
 
 [[repos]]

@@ -1,0 +1,27 @@
+---
+ldapServer:
+  config:
+    ldapBaseDn: dc=example,dc=org
+    logLevel: stats
+  auth:
+    password: admin
+
+seedData:
+  content: |
+    dn: {{ .Values.ldapServer.config.ldapBaseDn }}
+    objectClass: top
+    objectClass: dcObject
+    objectClass: organization
+    o: Example Organization
+    dc: example
+
+    dn: ou=people,{{ .Values.ldapServer.config.ldapBaseDn }}
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: people
+
+    dn: ou=groups,{{ .Values.ldapServer.config.ldapBaseDn }}
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: groups
+...
