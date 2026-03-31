@@ -1,18 +1,19 @@
 {{ if .Values.seedData.enabled }}
+---
 {
-  "apiVersion": "v1",
-  "kind": "ConfigMap",
-  "metadata": {
-    "name": {{ printf "%s-seed-ldif" .Release.Name | quote }},
-    "labels": {
-      "app.kubernetes.io/name": {{ .Chart.Name | quote }},
-      "app.kubernetes.io/instance": {{ .Release.Name | quote }},
-      "app.kubernetes.io/version": {{ .Chart.AppVersion | quote }},
-      "app.kubernetes.io/managed-by": {{ .Release.Service | quote }}
-    }
+  apiVersion: "v1",
+  kind: "ConfigMap",
+  metadata: {
+    name: {{ printf "%s-seed-ldif" .Release.Name | quote }},
+    labels: {
+      app.kubernetes.io/name: {{ .Chart.Name | quote }},
+      app.kubernetes.io/instance: {{ .Release.Name | quote }},
+      app.kubernetes.io/version: {{ .Chart.AppVersion | quote }},
+      app.kubernetes.io/managed-by: {{ .Release.Service | quote }},
+    },
   },
-  "data": {
-    "seed.ldif": {{ .Values.seedData.ldif | quote }}
-  }
+  data: {
+    seed.ldif: {{ .Values.seedData.ldif | quote }},
+  },
 }
 {{ end }}
