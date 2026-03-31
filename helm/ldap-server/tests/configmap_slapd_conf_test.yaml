@@ -1,0 +1,42 @@
+---
+suite: configmap-slapd-conf
+templates:
+  - templates/configmap-slapd-conf.yaml
+tests:
+  - it: renders a ConfigMap
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-slapd-conf
+
+  - it: contains the base DN in slapd.conf
+    asserts:
+      - matchRegex:
+          path: data["slapd.conf"]
+          pattern: suffix\s+"dc=example,dc=org"
+
+  - it: contains rootdn with base DN
+    asserts:
+      - matchRegex:
+          path: data["slapd.conf"]
+          pattern: rootdn\s+"cn=admin,dc=example,dc=org"
+
+  - it: includes rootpw.conf
+    asserts:
+      - matchRegex:
+          path: data["slapd.conf"]
+          pattern: include\s+/etc/ldap/rootpw.conf
+
+  - it: uses custom base DN
+    set:
+      ldapServer.config.ldapBaseDn: dc=test,dc=net
+    asserts:
+      - matchRegex:
+          path: data["slapd.conf"]
+          pattern: suffix\s+"dc=test,dc=net"
+      - matchRegex:
+          path: data["slapd.conf"]
+          pattern: rootdn\s+"cn=admin,dc=test,dc=net"
+...

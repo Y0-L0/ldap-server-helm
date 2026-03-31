@@ -1,0 +1,44 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": {{ printf "%s-slapd-conf" .Release.Name | quote }},
+    "labels": {
+      "app.kubernetes.io/name": {{ .Chart.Name | quote }},
+      "app.kubernetes.io/instance": {{ .Release.Name | quote }},
+      "app.kubernetes.io/version": {{ .Chart.AppVersion | quote }},
+      "app.kubernetes.io/managed-by": {{ .Release.Service | quote }}
+    }
+  },
+  "data": {
+    "slapd.conf": {{ include "slapd.conf" . | quote }}
+  }
+}
+
+{{ define "slapd.conf" }}
+# Schemas
+include   /etc/ldap/schema/core.schema
+include   /etc/ldap/schema/cosine.schema
+include   /etc/ldap/schema/inetorgperson.schema
+include   /etc/ldap/schema/nis.schema
+
+# Load MDB backend module
+modulepath /usr/lib/ldap
+moduleload back_mdb
+
+# Database
+database  mdb
+suffix    {{ .Values.ldapServer.config.ldapBaseDn | quote }}
+rootdn    {{ printf "cn=admin,%s" .Values.ldapServer.config.ldapBaseDn | quote }}
+include   /etc/ldap/rootpw.conf
+
+directory /var/lib/ldap
+
+# Indices
+index     objectClass eq
+
+# ACL: admin gets full access, everyone else can read
+access to *
+    by dn.exact={{ printf "cn=admin,%s" .Values.ldapServer.config.ldapBaseDn | quote }} write
+    by * read
+{{ end }}
