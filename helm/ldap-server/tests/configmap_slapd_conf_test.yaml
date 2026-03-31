@@ -24,7 +24,7 @@ tests:
     asserts:
       - matchRegex:
           path: data["slapd.conf"]
-          pattern: include\s+/etc/ldap/rootpw.conf
+          pattern: include\s+/etc/ldap/auth/rootpw.conf
 
   - it: uses custom base DN
     set:

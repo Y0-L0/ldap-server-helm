@@ -3,11 +3,6 @@ global:
   imageRegistry: ""
   imagePullPolicy: ""
 
-slapdConf:
-  existingConfigMap: null
-  content: null
-  file: files/slapd.conf
-
 ldapServer:
   config:
     ldapBaseDn: dc=example,dc=org
@@ -21,18 +16,18 @@ ldapServer:
         password: null
 
   image:
-    registry: ""
-    repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-server
-    tag: latest
-    digest: ""
+    registry: artifacts.software-univention.de
+    repository: nubus/images/ldap-server
+    tag: 0.47.14
+    digest: sha256:5f79818cc6246cb8a0e2d6c3ad92b374842f764bdb4477acab481b996fff277e
     pullPolicy: IfNotPresent
 
   resources: {}
 
 ldapManager:
   image:
-    registry: ""
-    repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-manager
+    registry: ghcr.io
+    repository: y0-l0/ldap-server-helm/ldap-manager
     tag: latest
     digest: ""
     pullPolicy: IfNotPresent
@@ -53,6 +48,11 @@ seedData:
   existingConfigMap: null
   content: null
   file: ""
+
+slapdConf:
+  existingConfigMap: null
+  content: null
+  file: files/slapd.conf
 
 additionalAnnotations: {}
 additionalLabels: {}

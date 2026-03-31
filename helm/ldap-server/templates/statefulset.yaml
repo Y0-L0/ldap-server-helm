@@ -40,7 +40,7 @@
           volumeMounts: [
             {name: "data", mountPath: "/var/lib/ldap"},
             {name: "run", mountPath: "/var/run/slapd"},
-            {name: "etc-ldap", mountPath: "/etc/ldap"},
+            {name: "etc-ldap", mountPath: "/etc/ldap/auth"},
           ],
         }],
         containers: [
@@ -65,7 +65,7 @@
             volumeMounts: [
               {name: "data", mountPath: "/var/lib/ldap"},
               {name: "run", mountPath: "/var/run/slapd"},
-              {name: "etc-ldap", mountPath: "/etc/ldap"},
+              {name: "etc-ldap", mountPath: "/etc/ldap/auth"},
               {name: "slapd-conf", mountPath: "/etc/ldap/slapd.conf", subPath: "slapd.conf"},
             ],
           },
