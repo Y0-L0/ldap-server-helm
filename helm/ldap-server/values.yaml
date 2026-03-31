@@ -1,0 +1,47 @@
+---
+ldapServer:
+  config:
+    ldapBaseDn: dc=example,dc=org
+    logLevel: stats
+
+  auth:
+    password: admin
+    existingSecret: ""
+
+  image:
+    repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-server
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  resources: {}
+
+ldapManager:
+  image:
+    repository: gitregistry.knut.univention.de/univention/customers/dataport/upx/container-ldap/ldap-manager
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  resources: {}
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+
+service:
+  type: ClusterIP
+  ports:
+    ldap: 389
+
+seedData:
+  enabled: false
+  ldif: ""
+
+additionalAnnotations: {}
+additionalLabels: {}
+fullnameOverride: ""
+nameOverride: ""
+nodeSelector: {}
+tolerations: []
+topologySpreadConstraints: []
+...

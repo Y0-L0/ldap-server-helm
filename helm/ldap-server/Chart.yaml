@@ -1,0 +1,8 @@
+---
+apiVersion: v2
+name: ldap-server
+description: OpenLDAP server with slapd.conf-based configuration
+type: application
+version: 0.1.0
+appVersion: 2.4.58
+...

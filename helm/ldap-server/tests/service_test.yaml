@@ -1,0 +1,16 @@
+---
+suite: service
+templates:
+  - templates/service.yaml
+tests:
+  - it: renders a Service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 389
+...

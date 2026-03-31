@@ -1,0 +1,8 @@
+---
+ldapServer:
+  config:
+    ldapBaseDn: dc=example,dc=org
+    logLevel: stats
+  auth:
+    password: testpassword
+...
