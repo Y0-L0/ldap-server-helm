@@ -1,0 +1,42 @@
+---
+name: prek
+
+"on":
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  prek:
+    runs-on: ubuntu-latest
+    container: ghcr.io/y0-l0/ldap-helm-chart/prek-runner:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Cache prek
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/.cache/prek
+          key: prek-${{ hashFiles('prek.toml', 'ldap-manager/prek.toml') }}
+
+      - name: Cache Go modules
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ hashFiles('ldap-manager/go.sum') }}
+
+      - name: Cache golangci-lint
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ~/.cache/golangci-lint
+          key: golangci-${{ hashFiles('ldap-manager/go.sum') }}
+
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - run: helm dep build helm/ldap-server
+
+      - run: prek run --all-files

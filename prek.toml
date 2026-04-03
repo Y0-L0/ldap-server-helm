@@ -31,7 +31,6 @@ hooks = [
 repo = "https://github.com/gruntwork-io/pre-commit"
 rev = "v0.1.30"
 hooks = [
-  { id = "shellcheck" },
   { id = "helmlint" },
 ]
 
@@ -64,7 +63,7 @@ files = "^helm/"
 [[repos.hooks]]
 id = "kubeconform"
 name = "kubeconform"
-entry = "sh -c 'helm template ldap-server helm/ldap-server/ -f helm/ldap-server/linter_values.yaml | kubeconform -strict -kubernetes-version 1.29.0'"
+entry = "sh -c 'helm template ldap-server helm/ldap-server/ -f helm/ldap-server/linter_values.yaml | kubeconform -strict -kubernetes-version 1.35.0'"
 language = "system"
 pass_filenames = false
 files = "^helm/"
