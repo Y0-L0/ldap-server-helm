@@ -1,7 +1,6 @@
 package sidecar
 
 import (
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -18,8 +17,6 @@ type fakeSeedBackend struct {
 	addCalls int
 }
 
-func (f *fakeSeedBackend) Check(_ context.Context) error { return nil }
-
 func (f *fakeSeedBackend) Add(dn string, attrs map[string][]string) error {
 	f.addCalls++
 	if f.addErr != nil {
@@ -35,7 +32,7 @@ func (s *Unittest) TestSeed_SkipsWhenSentinelExists() {
 	s.WriteFile(filepath.Join(dataDir, sentinelFile), []byte("done"))
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().NoError(err)
 	s.Require().Equal(0, backend.addCalls)
@@ -58,7 +55,7 @@ ou: people
 `))
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().NoError(err)
 	s.Require().Equal(2, backend.addCalls)
@@ -82,7 +79,7 @@ objectClass: top
 `))
 
 	backend := &fakeSeedBackend{addErr: errors.New("ldap: connection refused")}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().Error(err)
 	s.Require().Contains(err.Error(), "ldap: connection refused")
@@ -97,7 +94,7 @@ func (s *Unittest) TestSeed_EmptySeedDir() {
 	seedDir := s.T().TempDir()
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().NoError(err)
 	s.Require().Equal(0, backend.addCalls)
@@ -118,7 +115,7 @@ objectClass: organizationalUnit
 `))
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().NoError(err)
 	s.Require().Equal(2, backend.addCalls)
@@ -134,7 +131,7 @@ dc: example
 `))
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().NoError(err)
 	s.Require().Equal(1, backend.addCalls)
@@ -150,7 +147,7 @@ func (s *Unittest) TestSeed_UnreadableLDIFFile() {
 	s.Require().NoError(os.Mkdir(filepath.Join(seedDir, "trick.ldif"), 0o750))
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().Error(err)
 	s.Require().Contains(err.Error(), "trick.ldif")
@@ -167,7 +164,7 @@ func (s *Unittest) TestSeed_SentinelWriteError() {
 	})
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().Error(err)
 	s.Require().Contains(err.Error(), "writing sentinel")
@@ -182,7 +179,7 @@ objectClass: top
 `))
 
 	backend := &fakeSeedBackend{}
-	err := seed(backend, seedDir, dataDir)
+	err := seed(backend.Add, seedDir, dataDir)
 
 	s.Require().NoError(err)
 	s.Require().Equal(1, backend.addCalls)

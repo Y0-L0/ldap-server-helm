@@ -48,5 +48,5 @@ func RunSidecar(cfg sidecar.Config, lcfg ldapConfig) error {
 	)
 	defer stop()
 
-	return sidecar.Run(ctx, cfg, backend)
+	return sidecar.Run(ctx, cfg, backend.Check, backend.Add)
 }

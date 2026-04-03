@@ -56,7 +56,7 @@ objectClass: top
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg, backend) }()
+	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
 
 	// Wait for sentinel to appear, proving seed completed.
 	s.Require().Eventually(func() bool {
@@ -88,7 +88,7 @@ func (s *Unittest) TestRun_WaitsForSlapd() {
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg, backend) }()
+	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
 
 	// Slapd is unhealthy — should not have seeded yet.
 	time.Sleep(50 * time.Millisecond)
@@ -123,7 +123,7 @@ func (s *Unittest) TestRun_CancelStopsRun() {
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg, backend) }()
+	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
 
 	// Cancel immediately — slapd is unhealthy so Run is stuck in waitForSlapd.
 	cancel()
@@ -154,7 +154,7 @@ func (s *Unittest) TestRun_HealthEndpointServes() {
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- Run(ctx, cfg, backend) }()
+	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
 
 	// Wait for seed to finish, proving the server started.
 	s.Require().Eventually(func() bool {
@@ -176,7 +176,7 @@ func (s *Unittest) TestWaitForSlapd_ImmediatelyHealthy() {
 	backend := &fakeBackend{}
 	backend.healthy.Store(true)
 
-	err := waitForSlapd(context.Background(), backend, 10*time.Millisecond)
+	err := waitForSlapd(context.Background(), backend.Check, 10*time.Millisecond)
 	s.Require().NoError(err)
 }
 
@@ -185,7 +185,7 @@ func (s *Unittest) TestWaitForSlapd_CancelledWhileWaiting() {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := waitForSlapd(ctx, backend, time.Second)
+	err := waitForSlapd(ctx, backend.Check, time.Second)
 	s.Require().ErrorIs(err, context.Canceled)
 }
 
@@ -209,7 +209,7 @@ objectClass: top
 		PollDelay:  10 * time.Millisecond,
 	}
 
-	err := Run(ctx, cfg, backend)
+	err := Run(ctx, cfg, backend.Check, backend.Add)
 	s.Require().Error(err)
 	s.Require().Contains(err.Error(), "ldap: connection refused")
 }

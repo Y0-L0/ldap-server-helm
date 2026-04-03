@@ -10,11 +10,10 @@ import (
 	"time"
 )
 
-// Backend provides LDAP health checking and seeding operations.
-type Backend interface {
-	Check(ctx context.Context) error
-	Add(dn string, attrs map[string][]string) error
-}
+type (
+	checkFunc func(context.Context) error
+	addFunc   func(string, map[string][]string) error
+)
 
 // Config holds the sidecar runtime configuration.
 type Config struct {
@@ -25,8 +24,8 @@ type Config struct {
 }
 
 // Run starts the sidecar. Blocks until ctx is cancelled.
-func Run(ctx context.Context, cfg Config, backend Backend) error {
-	srv := newHealthServer(cfg.HealthAddr, backend)
+func Run(ctx context.Context, cfg Config, check checkFunc, add addFunc) error {
+	srv := newHealthServer(cfg.HealthAddr, check)
 
 	go func() {
 		slog.Info("starting health server", "addr", cfg.HealthAddr)
@@ -35,11 +34,11 @@ func Run(ctx context.Context, cfg Config, backend Backend) error {
 		}
 	}()
 
-	if err := waitForSlapd(ctx, backend, cfg.PollDelay); err != nil {
+	if err := waitForSlapd(ctx, check, cfg.PollDelay); err != nil {
 		return fmt.Errorf("waiting for slapd: %w", err)
 	}
 
-	if err := seed(backend, cfg.SeedDir, cfg.DataDir); err != nil {
+	if err := seed(add, cfg.SeedDir, cfg.DataDir); err != nil {
 		return fmt.Errorf("seeding: %w", err)
 	}
 
@@ -56,9 +55,9 @@ func Run(ctx context.Context, cfg Config, backend Backend) error {
 	return nil
 }
 
-func waitForSlapd(ctx context.Context, backend Backend, delay time.Duration) error {
+func waitForSlapd(ctx context.Context, check checkFunc, delay time.Duration) error {
 	for {
-		if err := backend.Check(ctx); err == nil {
+		if err := check(ctx); err == nil {
 			slog.Info("slapd is reachable")
 			return nil
 		}

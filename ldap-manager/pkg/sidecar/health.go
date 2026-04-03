@@ -7,11 +7,11 @@ import (
 )
 
 // newHealthServer returns an http.Server serving /healthz and /readyz.
-func newHealthServer(addr string, backend Backend) *http.Server {
+func newHealthServer(addr string, check checkFunc) *http.Server {
 	mux := http.NewServeMux()
 
-	check := func(w http.ResponseWriter, r *http.Request) {
-		if err := backend.Check(r.Context()); err != nil {
+	healthcheck := func(w http.ResponseWriter, r *http.Request) {
+		if err := check(r.Context()); err != nil {
 			slog.Warn("health check failed", "error", err)
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
@@ -19,8 +19,8 @@ func newHealthServer(addr string, backend Backend) *http.Server {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	mux.HandleFunc("/healthz", check)
-	mux.HandleFunc("/readyz", check)
+	mux.HandleFunc("/healthz", healthcheck)
+	mux.HandleFunc("/readyz", healthcheck)
 
 	return &http.Server{
 		Addr:              addr,

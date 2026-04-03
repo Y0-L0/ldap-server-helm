@@ -38,7 +38,7 @@ sn: Seeded
 			SeedDir:    seedDir,
 			DataDir:    seedDataDir,
 			PollDelay:  100 * time.Millisecond,
-		}, s.backend)
+		}, s.backend.Check, s.backend.Add)
 	}()
 
 	// Wait for sentinel file to appear (seed completed)
@@ -93,7 +93,7 @@ dc: example
 			SeedDir:    seedDir,
 			DataDir:    seedDataDir,
 			PollDelay:  100 * time.Millisecond,
-		}, backend)
+		}, backend.Check, backend.Add)
 	}()
 
 	// Give sidecar time to start and (not) seed

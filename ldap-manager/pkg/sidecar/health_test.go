@@ -18,8 +18,6 @@ func (f *fakeHealthBackend) Check(_ context.Context) error {
 	return nil
 }
 
-func (f *fakeHealthBackend) Add(_ string, _ map[string][]string) error { return nil }
-
 func (s *Unittest) TestHealthz() {
 	tests := []struct {
 		name       string
@@ -32,7 +30,7 @@ func (s *Unittest) TestHealthz() {
 	for _, tc := range tests {
 		s.Run(tc.name, func() {
 			backend := &fakeHealthBackend{healthy: tc.healthy}
-			srv := newHealthServer(":0", backend)
+			srv := newHealthServer(":0", backend.Check)
 
 			req, _ := http.NewRequestWithContext(s.T().Context(), http.MethodGet, "/healthz", nil)
 			rec := httptest.NewRecorder()
@@ -55,7 +53,7 @@ func (s *Unittest) TestReadyz() {
 	for _, tc := range tests {
 		s.Run(tc.name, func() {
 			backend := &fakeHealthBackend{healthy: tc.healthy}
-			srv := newHealthServer(":0", backend)
+			srv := newHealthServer(":0", backend.Check)
 
 			req, _ := http.NewRequestWithContext(s.T().Context(), http.MethodGet, "/readyz", nil)
 			rec := httptest.NewRecorder()
