@@ -1,0 +1,18 @@
+---
+services:
+  e2e:
+    build:
+      context: ldap-manager
+      target: e2e
+
+  prek:
+    build:
+      context: .
+      dockerfile: .github/prek/Dockerfile
+    user: ${PREK_UID:-1000}:${PREK_GID:-1000}
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      HOME: /tmp
+    command: [sh, -c, git config --global --add safe.directory /workspace && prek run --all-files]

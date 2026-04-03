@@ -154,6 +154,10 @@ func (s *Unittest) TestSeed_UnreadableLDIFFile() {
 }
 
 func (s *Unittest) TestSeed_SentinelWriteError() {
+	if os.Getuid() == 0 {
+		s.T().Skip("skipping: chmod has no effect on root")
+	}
+
 	dataDir := s.T().TempDir()
 	seedDir := s.T().TempDir()
 
