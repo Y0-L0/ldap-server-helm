@@ -1,5 +1,5 @@
-// Package init implements the ldap-manager init container logic.
-package init
+// Package setup implements the ldap-manager init container logic.
+package setup
 
 import (
 	"fmt"

@@ -8,12 +8,12 @@ import (
 	"log/slog"
 	"os"
 
-	initpkg "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/init"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/setup"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
 type (
-	initFunc    func(initpkg.Config) error
+	initFunc    func(setup.Config) error
 	sidecarFunc func(sidecar.Config, ldapConfig) error
 )
 
@@ -22,7 +22,7 @@ func Main(args []string, stderr io.Writer, runInit initFunc, runSidecar sidecarF
 	setupLogging()
 
 	if len(args) < 2 {
-		fmt.Fprintln(stderr, "usage: ldap-manager <init|sidecar>")
+		fmt.Fprintln(stderr, "usage: ldap-manager <setup|sidecar>")
 		return 1
 	}
 
@@ -30,7 +30,7 @@ func Main(args []string, stderr io.Writer, runInit initFunc, runSidecar sidecarF
 	var err error
 
 	switch cmd {
-	case "init":
+	case "setup":
 		cfg, parseErr := parseInitConfig()
 		if parseErr != nil {
 			err = parseErr
@@ -61,12 +61,12 @@ func envOrDefault(key, fallback string) string {
 
 var errMissingAdminPW = errors.New("LDAP_ADMIN_PW is required")
 
-func parseInitConfig() (initpkg.Config, error) {
+func parseInitConfig() (setup.Config, error) {
 	adminPW := os.Getenv("LDAP_ADMIN_PW")
 	if adminPW == "" {
-		return initpkg.Config{}, errMissingAdminPW
+		return setup.Config{}, errMissingAdminPW
 	}
-	return initpkg.Config{
+	return setup.Config{
 		DataDir:    envOrDefault("LDAP_DATA_DIR", "/var/lib/ldap"),
 		RunDir:     envOrDefault("LDAP_RUN_DIR", "/var/run/slapd"),
 		RootpwPath: envOrDefault("LDAP_ROOTPW_PATH", "/etc/ldap/auth/rootpw.conf"),

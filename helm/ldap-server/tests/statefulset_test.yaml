@@ -18,7 +18,7 @@ tests:
           value: ldap-manager-init
       - equal:
           path: spec.template.spec.initContainers[0].args[0]
-          value: init
+          value: setup
 
   - it: runs slapd with explicit command
     asserts:

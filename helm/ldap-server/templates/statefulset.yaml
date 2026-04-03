@@ -24,7 +24,7 @@
           name: "ldap-manager-init",
           image: {{ include "common.images.image" (dict "imageRoot" .Values.ldapManager.image "global" .Values.global "chart" .Chart) | quote }},
           imagePullPolicy: {{ coalesce .Values.ldapManager.image.pullPolicy ((.Values.global).imagePullPolicy) "IfNotPresent" | quote }},
-          args: ["init"],
+          args: ["setup"],
           env: [{
             name: "LDAP_ADMIN_PW",
             valueFrom: {

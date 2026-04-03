@@ -1,4 +1,4 @@
-package init
+package setup
 
 import (
 	"crypto/sha1" //nolint:gosec // SHA1 is mandated by the LDAP SSHA spec (RFC 3112)

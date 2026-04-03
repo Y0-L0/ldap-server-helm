@@ -5,12 +5,12 @@ import (
 	"errors"
 	"path/filepath"
 
-	initpkg "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/init"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/setup"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
 var (
-	stubInit    initFunc    = func(initpkg.Config) error { return nil }
+	stubInit    initFunc    = func(setup.Config) error { return nil }
 	stubSidecar sidecarFunc = func(sidecar.Config, ldapConfig) error { return nil }
 )
 
@@ -30,10 +30,10 @@ func (s *Unittest) TestMain_InvalidSubcommand() {
 
 func (s *Unittest) TestMain_CommandError() {
 	s.T().Setenv("LDAP_ADMIN_PW", "test")
-	ri := initFunc(func(initpkg.Config) error { return errors.New("boom") })
+	ri := initFunc(func(setup.Config) error { return errors.New("boom") })
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "init"}, &stderr, ri, stubSidecar)
+	code := Main([]string{"ldap-manager", "setup"}, &stderr, ri, stubSidecar)
 	s.Require().Equal(1, code)
 }
 
@@ -41,7 +41,7 @@ func (s *Unittest) TestMain_InitMissingPassword() {
 	s.T().Setenv("LDAP_ADMIN_PW", "")
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "init"}, &stderr, stubInit, stubSidecar)
+	code := Main([]string{"ldap-manager", "setup"}, &stderr, stubInit, stubSidecar)
 	s.Require().Equal(1, code)
 }
 
@@ -52,11 +52,11 @@ func (s *Unittest) TestMain_InitCustomEnv() {
 	s.T().Setenv("LDAP_RUN_DIR", filepath.Join(tmp, "run"))
 	s.T().Setenv("LDAP_ROOTPW_PATH", filepath.Join(tmp, "rootpw.conf"))
 
-	var got initpkg.Config
-	ri := initFunc(func(cfg initpkg.Config) error { got = cfg; return nil })
+	var got setup.Config
+	ri := initFunc(func(cfg setup.Config) error { got = cfg; return nil })
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "init"}, &stderr, ri, stubSidecar)
+	code := Main([]string{"ldap-manager", "setup"}, &stderr, ri, stubSidecar)
 	s.Require().Equal(0, code)
 	s.Require().Equal(filepath.Join(tmp, "data"), got.DataDir)
 	s.Require().Equal(filepath.Join(tmp, "run"), got.RunDir)
@@ -67,11 +67,11 @@ func (s *Unittest) TestMain_InitCustomEnv() {
 func (s *Unittest) TestMain_InitDefaults() {
 	s.T().Setenv("LDAP_ADMIN_PW", "secret")
 
-	var got initpkg.Config
-	ri := initFunc(func(cfg initpkg.Config) error { got = cfg; return nil })
+	var got setup.Config
+	ri := initFunc(func(cfg setup.Config) error { got = cfg; return nil })
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "init"}, &stderr, ri, stubSidecar)
+	code := Main([]string{"ldap-manager", "setup"}, &stderr, ri, stubSidecar)
 	s.Require().Equal(0, code)
 	s.Require().Equal("/var/lib/ldap", got.DataDir)
 	s.Require().Equal("/var/run/slapd", got.RunDir)

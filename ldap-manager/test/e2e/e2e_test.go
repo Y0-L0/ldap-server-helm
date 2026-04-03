@@ -11,8 +11,8 @@ import (
 	"text/template"
 	"time"
 
-	initpkg "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/init"
 	ldapadapter "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/setup"
 )
 
 func TestMain(m *testing.M) {
@@ -69,13 +69,13 @@ func (s *E2E) SetupSuite() {
 	confPath := filepath.Join(s.tmpDir, "slapd.conf")
 
 	// Step 1: run real init code
-	err := initpkg.Run(initpkg.Config{
+	err := setup.Run(setup.Config{
 		DataDir:    s.dataDir,
 		RunDir:     runDir,
 		RootpwPath: rootpwPath,
 		AdminPW:    adminPW,
 	})
-	s.Require().NoError(err, "init.Run")
+	s.Require().NoError(err, "setup.Run")
 
 	// Step 2: generate slapd.conf
 	f, err := os.Create(confPath)
