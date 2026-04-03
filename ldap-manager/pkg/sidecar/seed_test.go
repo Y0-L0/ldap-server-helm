@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 )
 
+const baseLDIF = "base.ldif"
+
 type addedEntry struct {
 	dn    string
 	attrs map[string][]string
@@ -41,7 +43,7 @@ func (s *Unittest) TestSeed_SkipsWhenSentinelExists() {
 func (s *Unittest) TestSeed_SeedsAndCreatesSentinel() {
 	dataDir := s.T().TempDir()
 	seedDir := s.T().TempDir()
-	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=example,dc=org
+	s.WriteFile(filepath.Join(seedDir, baseLDIF), []byte(`dn: dc=example,dc=org
 objectClass: top
 objectClass: dcObject
 objectClass: organization
@@ -74,7 +76,7 @@ ou: people
 func (s *Unittest) TestSeed_PropagatesLDAPError() {
 	dataDir := s.T().TempDir()
 	seedDir := s.T().TempDir()
-	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=example,dc=org
+	s.WriteFile(filepath.Join(seedDir, baseLDIF), []byte(`dn: dc=example,dc=org
 objectClass: top
 `))
 
@@ -124,7 +126,7 @@ objectClass: organizationalUnit
 func (s *Unittest) TestSeed_MalformedLineSkipped() {
 	dataDir := s.T().TempDir()
 	seedDir := s.T().TempDir()
-	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=example,dc=org
+	s.WriteFile(filepath.Join(seedDir, baseLDIF), []byte(`dn: dc=example,dc=org
 objectClass: top
 garbage_no_colon
 dc: example
@@ -178,7 +180,7 @@ func (s *Unittest) TestSeed_IgnoresNonLDIFFiles() {
 	dataDir := s.T().TempDir()
 	seedDir := s.T().TempDir()
 	s.WriteFile(filepath.Join(seedDir, "readme.txt"), []byte("not an ldif"))
-	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=example,dc=org
+	s.WriteFile(filepath.Join(seedDir, baseLDIF), []byte(`dn: dc=example,dc=org
 objectClass: top
 `))
 

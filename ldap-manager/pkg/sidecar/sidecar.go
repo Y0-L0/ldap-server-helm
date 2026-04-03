@@ -45,7 +45,7 @@ func Run(ctx context.Context, cfg Config, check checkFunc, add addFunc) error {
 	slog.Info("health check API running", "addr", cfg.HealthAddr)
 	<-ctx.Done()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
