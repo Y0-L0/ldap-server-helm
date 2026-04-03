@@ -7,13 +7,13 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/internal/testsuite"
-	ldapadapter "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
 )
 
 type E2E struct {
 	testsuite.LoggingSuite
 
-	backend *ldapadapter.RealLDAP
+	backend *ldap.RealLDAP
 	slapd   *exec.Cmd
 	tmpDir  string
 	dataDir string

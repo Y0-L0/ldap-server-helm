@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	ldapadapter "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/setup"
 )
 
@@ -120,7 +120,7 @@ func (s *E2E) SetupSuite() {
 	s.Require().NoError(s.slapd.Start(), "slapd start")
 
 	// Step 6: wait for slapd readiness
-	s.backend = &ldapadapter.RealLDAP{
+	s.backend = &ldap.RealLDAP{
 		URI:    s.ldapURI,
 		BindDN: adminDN,
 		BindPW: adminPW,

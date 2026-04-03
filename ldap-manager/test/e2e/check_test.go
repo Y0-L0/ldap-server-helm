@@ -3,7 +3,7 @@ package e2e
 import (
 	"context"
 
-	ldapadapter "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
 )
 
 func (s *E2E) TestCheckRootDSE() {
@@ -12,7 +12,7 @@ func (s *E2E) TestCheckRootDSE() {
 }
 
 func (s *E2E) TestCheckUnreachable() {
-	bad := &ldapadapter.RealLDAP{
+	bad := &ldap.RealLDAP{
 		URI:    "ldap://127.0.0.1:1",
 		BindDN: adminDN,
 		BindPW: adminPW,

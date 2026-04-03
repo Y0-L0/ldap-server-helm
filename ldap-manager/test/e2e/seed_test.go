@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	ldapadapter "github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
+	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/ldap"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
@@ -80,7 +80,7 @@ dc: example
 	defer cancel()
 
 	// Use a separate backend to avoid interfering with other tests
-	backend := &ldapadapter.RealLDAP{
+	backend := &ldap.RealLDAP{
 		URI:    s.ldapURI,
 		BindDN: adminDN,
 		BindPW: adminPW,
