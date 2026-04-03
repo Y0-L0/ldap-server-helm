@@ -51,10 +51,10 @@ func (s *Unittest) TestSSHAHash_Format() {
 	hash, err := generateSSHA("test")
 	s.Require().NoError(err)
 
-	s.Require().True(strings.HasPrefix(hash, "{SSHA}"), "hash should start with {SSHA}")
+	s.Require().True(strings.HasPrefix(hash, sshaPrefix), "hash should start with "+sshaPrefix)
 
 	// Decode the base64 payload: should be 20-byte SHA1 + 8-byte salt = 28 bytes.
-	encoded := strings.TrimPrefix(hash, "{SSHA}")
+	encoded := strings.TrimPrefix(hash, sshaPrefix)
 	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	s.Require().NoError(err)
 	s.Require().Len(decoded, 28, "decoded hash should be 28 bytes (20 SHA1 + 8 salt)")
@@ -77,7 +77,7 @@ func (s *Unittest) TestSSHAVerify_WrongPassword() {
 
 func (s *Unittest) TestSSHAVerify_Malformed() {
 	s.Require().False(verifySSHA("garbage", "test"))
-	s.Require().False(verifySSHA("{SSHA}", "test"))
+	s.Require().False(verifySSHA(sshaPrefix, "test"))
 	s.Require().False(verifySSHA("{SSHA}notbase64!!!", "test"))
 	s.Require().False(verifySSHA("{SSHA}dG9vc2hvcnQ=", "test")) // too short payload
 }

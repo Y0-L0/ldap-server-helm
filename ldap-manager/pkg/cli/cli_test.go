@@ -9,6 +9,8 @@ import (
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
+const cmdName = "ldap-manager"
+
 var (
 	stubInit    initFunc    = func(setup.Config) error { return nil }
 	stubSidecar sidecarFunc = func(sidecar.Config, ldapConfig) error { return nil }
@@ -16,14 +18,14 @@ var (
 
 func (s *Unittest) TestMain_NoArgs() {
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager"}, &stderr, stubInit, stubSidecar)
+	code := Main([]string{cmdName}, &stderr, stubInit, stubSidecar)
 	s.Require().Equal(1, code)
 	s.Require().Contains(stderr.String(), "usage:")
 }
 
 func (s *Unittest) TestMain_InvalidSubcommand() {
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "bogus"}, &stderr, stubInit, stubSidecar)
+	code := Main([]string{cmdName, "bogus"}, &stderr, stubInit, stubSidecar)
 	s.Require().Equal(1, code)
 	s.Require().Contains(stderr.String(), "unknown command: bogus")
 }
@@ -33,7 +35,7 @@ func (s *Unittest) TestMain_CommandError() {
 	ri := initFunc(func(setup.Config) error { return errors.New("boom") })
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "setup"}, &stderr, ri, stubSidecar)
+	code := Main([]string{cmdName, "setup"}, &stderr, ri, stubSidecar)
 	s.Require().Equal(1, code)
 }
 
@@ -41,7 +43,7 @@ func (s *Unittest) TestMain_InitMissingPassword() {
 	s.T().Setenv("LDAP_ADMIN_PW", "")
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "setup"}, &stderr, stubInit, stubSidecar)
+	code := Main([]string{cmdName, "setup"}, &stderr, stubInit, stubSidecar)
 	s.Require().Equal(1, code)
 }
 
@@ -56,7 +58,7 @@ func (s *Unittest) TestMain_InitCustomEnv() {
 	ri := initFunc(func(cfg setup.Config) error { got = cfg; return nil })
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "setup"}, &stderr, ri, stubSidecar)
+	code := Main([]string{cmdName, "setup"}, &stderr, ri, stubSidecar)
 	s.Require().Equal(0, code)
 	s.Require().Equal(filepath.Join(tmp, "data"), got.DataDir)
 	s.Require().Equal(filepath.Join(tmp, "run"), got.RunDir)
@@ -71,7 +73,7 @@ func (s *Unittest) TestMain_InitDefaults() {
 	ri := initFunc(func(cfg setup.Config) error { got = cfg; return nil })
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "setup"}, &stderr, ri, stubSidecar)
+	code := Main([]string{cmdName, "setup"}, &stderr, ri, stubSidecar)
 	s.Require().Equal(0, code)
 	s.Require().Equal("/var/lib/ldap", got.DataDir)
 	s.Require().Equal("/var/run/slapd", got.RunDir)
@@ -96,7 +98,7 @@ func (s *Unittest) TestMain_SidecarCustomEnv() {
 	})
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "sidecar"}, &stderr, stubInit, rs)
+	code := Main([]string{cmdName, "sidecar"}, &stderr, stubInit, rs)
 	s.Require().Equal(0, code)
 	s.Require().Equal(":9090", gotCfg.HealthAddr)
 	s.Require().Equal("/custom/seed", gotCfg.SeedDir)
@@ -116,7 +118,7 @@ func (s *Unittest) TestMain_SidecarDefaults() {
 	})
 
 	var stderr bytes.Buffer
-	code := Main([]string{"ldap-manager", "sidecar"}, &stderr, stubInit, rs)
+	code := Main([]string{cmdName, "sidecar"}, &stderr, stubInit, rs)
 	s.Require().Equal(0, code)
 	s.Require().Equal(":8080", gotCfg.HealthAddr)
 	s.Require().Equal("/seed", gotCfg.SeedDir)

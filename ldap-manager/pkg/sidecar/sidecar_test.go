@@ -30,6 +30,17 @@ func (f *fakeBackend) Add(dn string, attrs map[string][]string) error {
 	return nil
 }
 
+func (s *Unittest) makeRunConfig() (Config, string, string) {
+	seedDir := s.T().TempDir()
+	dataDir := s.T().TempDir()
+	return Config{
+		HealthAddr: "127.0.0.1:0",
+		SeedDir:    seedDir,
+		DataDir:    dataDir,
+		PollDelay:  10 * time.Millisecond,
+	}, seedDir, dataDir
+}
+
 var errUnhealthy = &unhealthyError{}
 
 type unhealthyError struct{}
@@ -37,8 +48,7 @@ type unhealthyError struct{}
 func (e *unhealthyError) Error() string { return "unhealthy" }
 
 func (s *Unittest) TestRun_SeedsAfterHealthy() {
-	dataDir := s.T().TempDir()
-	seedDir := s.T().TempDir()
+	cfg, seedDir, dataDir := s.makeRunConfig()
 	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=test,dc=org
 objectClass: top
 `))
@@ -47,13 +57,6 @@ objectClass: top
 	backend.healthy.Store(true)
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	cfg := Config{
-		HealthAddr: "127.0.0.1:0",
-		SeedDir:    seedDir,
-		DataDir:    dataDir,
-		PollDelay:  10 * time.Millisecond,
-	}
 
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
@@ -72,20 +75,12 @@ objectClass: top
 }
 
 func (s *Unittest) TestRun_WaitsForSlapd() {
-	dataDir := s.T().TempDir()
-	seedDir := s.T().TempDir()
+	cfg, _, dataDir := s.makeRunConfig()
 
 	backend := &fakeBackend{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	cfg := Config{
-		HealthAddr: "127.0.0.1:0",
-		SeedDir:    seedDir,
-		DataDir:    dataDir,
-		PollDelay:  10 * time.Millisecond,
-	}
 
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
@@ -108,19 +103,11 @@ func (s *Unittest) TestRun_WaitsForSlapd() {
 }
 
 func (s *Unittest) TestRun_CancelStopsRun() {
-	dataDir := s.T().TempDir()
-	seedDir := s.T().TempDir()
+	cfg, _, _ := s.makeRunConfig()
 
 	backend := &fakeBackend{}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	cfg := Config{
-		HealthAddr: "127.0.0.1:0",
-		SeedDir:    seedDir,
-		DataDir:    dataDir,
-		PollDelay:  10 * time.Millisecond,
-	}
 
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
@@ -137,21 +124,13 @@ func (s *Unittest) TestRun_CancelStopsRun() {
 }
 
 func (s *Unittest) TestRun_HealthEndpointServes() {
-	dataDir := s.T().TempDir()
-	seedDir := s.T().TempDir()
+	cfg, _, dataDir := s.makeRunConfig()
 
 	backend := &fakeBackend{}
 	backend.healthy.Store(true)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	cfg := Config{
-		HealthAddr: "127.0.0.1:0",
-		SeedDir:    seedDir,
-		DataDir:    dataDir,
-		PollDelay:  10 * time.Millisecond,
-	}
 
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, cfg, backend.Check, backend.Add) }()
@@ -190,8 +169,7 @@ func (s *Unittest) TestWaitForSlapd_CancelledWhileWaiting() {
 }
 
 func (s *Unittest) TestRun_SeedErrorPropagates() {
-	dataDir := s.T().TempDir()
-	seedDir := s.T().TempDir()
+	cfg, seedDir, _ := s.makeRunConfig()
 	s.WriteFile(filepath.Join(seedDir, "base.ldif"), []byte(`dn: dc=test,dc=org
 objectClass: top
 `))
@@ -201,13 +179,6 @@ objectClass: top
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	cfg := Config{
-		HealthAddr: "127.0.0.1:0",
-		SeedDir:    seedDir,
-		DataDir:    dataDir,
-		PollDelay:  10 * time.Millisecond,
-	}
 
 	err := Run(ctx, cfg, backend.Check, backend.Add)
 	s.Require().Error(err)
