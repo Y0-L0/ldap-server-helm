@@ -16,3 +16,15 @@ services:
     environment:
       HOME: /tmp
     command: [sh, -c, git config --global --add safe.directory /workspace && prek run --all-files]
+
+  release:
+    build:
+      context: .
+      dockerfile: .github/release/Dockerfile
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      GITHUB_ACTOR: ${GITHUB_ACTOR:-local}
+      GH_TOKEN: ${GH_TOKEN:-dummy}
+    entrypoint: [bash, .github/scripts/chart-oci-release.sh]

@@ -16,7 +16,7 @@ ADD --checksum=sha256:02ce9722d541238f81459938b84cf47df2fdf1187493b4bfb2346754d8
     /tmp/helm.tar.gz
 
 # yq v4.45.1
-ADD --checksum=sha256:e4db6b5f58f8d7f5f5a22e6a08e2b4e86d8dce9ffeab3c6c8f3b3a0f2c9b1d4a \
+ADD --checksum=sha256:654d2943ca1d3be2024089eb4f270f4070f491a0610481d128509b2834870049 \
     https://github.com/mikefarah/yq/releases/download/v4.45.1/yq_linux_amd64 \
     /target/usr/local/bin/yq
 

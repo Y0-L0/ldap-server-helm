@@ -3,6 +3,8 @@ name: release
 
 "on":
   push:
+    tags:
+      - v*
 
 permissions:
   contents: write
@@ -22,6 +24,5 @@ jobs:
 
       - run: .github/scripts/chart-oci-release.sh "${{ github.ref_name }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
