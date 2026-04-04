@@ -11,7 +11,7 @@ setup_auth() {
     mkdir -p ~/.docker
     printf '{"auths":{"%s":{"auth":"%s"}}}' \
         "$REGISTRY" \
-        "$(printf '%s:%s' "$GITHUB_ACTOR" "$GITHUB_TOKEN" | base64 -w0)" \
+        "$(printf '%s:%s' "$GITHUB_ACTOR" "$GH_TOKEN" | base64 -w0)" \
         > ~/.docker/config.json
 }
 
@@ -27,8 +27,8 @@ build_image() {
 }
 
 update_yaml() {
-    yq e ".ldapManager.image.tag = \"${VERSION}\"" -i helm/ldap-server/values.yaml
-    yq e ".ldapManager.image.digest = \"${DIGEST}\"" -i helm/ldap-server/values.yaml
+    sed -i "/^ldapManager:/,/^[^ ]/ s/^\(    tag: \).*/\1${VERSION}/" helm/ldap-server/values.yaml
+    sed -i "/^ldapManager:/,/^[^ ]/ s/^\(    digest: \).*/\1${DIGEST}/" helm/ldap-server/values.yaml
     yq e ".version = \"${VERSION}\"" -i helm/ldap-server/Chart.yaml
 }
 
@@ -36,9 +36,8 @@ package_chart() {
     helm dep build helm/ldap-server/
     helm package helm/ldap-server/
 
-    CHART_PUSH=$(helm push "ldap-server-${VERSION}.tgz" "$CHART_REPO" 2>&1)
-    printf '%s\n' "$CHART_PUSH"
-    CHART_DIGEST=$(printf '%s\n' "$CHART_PUSH" | grep '^Digest:' | awk '{print $2}')
+    helm push "ldap-server-${VERSION}.tgz" "$CHART_REPO" 2>&1 | tee /tmp/helm-push.log
+    CHART_DIGEST=$(sed -n 's/^Digest: //p' /tmp/helm-push.log)
 }
 
 create_release() {
@@ -68,9 +67,10 @@ commit_back() {
     git push origin HEAD:main
 }
 
+git config --global --add safe.directory /workspace
 setup_auth
 build_image
 update_yaml
 package_chart
-# create_release
+create_release
 # commit_back
