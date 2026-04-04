@@ -1,0 +1,39 @@
+---
+name: release-runner-image
+
+"on":
+  push:
+    branches:
+      - main
+    paths:
+      - .github/release/Dockerfile
+  pull_request:
+    paths:
+      - .github/release/Dockerfile
+
+permissions:
+  packages: write
+
+jobs:
+  release-runner-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: .github/release/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/y0-l0/ldap-helm-chart/release-runner:latest
+            ghcr.io/y0-l0/ldap-helm-chart/release-runner:${{ github.sha }}

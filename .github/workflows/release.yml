@@ -1,0 +1,27 @@
+---
+name: release
+
+"on":
+  push:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: ghcr.io/y0-l0/ldap-helm-chart/release-runner:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - run: .github/scripts/chart-oci-release.sh "${{ github.ref_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
