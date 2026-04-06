@@ -2,15 +2,16 @@
 package cli
 
 import (
-	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/setup"
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
+
+const defaultConfigPath = "/etc/ldap-manager/config.json"
 
 type (
 	initFunc    func(setup.Config) error
@@ -19,57 +20,52 @@ type (
 
 // Main runs the ldap-manager CLI. Returns an exit code.
 func Main(args []string, stderr io.Writer, runInit initFunc, runSidecar sidecarFunc) int {
-	setupLogging()
+	fset := flag.NewFlagSet("ldap-manager", flag.ContinueOnError)
+	fset.SetOutput(stderr)
+	configPath := fset.String("config", defaultConfigPath, "path to JSON config file")
 
-	if len(args) < 2 {
-		fmt.Fprintln(stderr, "usage: ldap-manager <setup|sidecar>")
+	if err := fset.Parse(args[1:]); err != nil {
 		return 1
 	}
 
-	cmd := args[1]
-	var err error
+	remaining := fset.Args()
+	if len(remaining) < 1 {
+		fmt.Fprintln(stderr, "usage: ldap-manager [--config <path>] <setup|sidecar>")
+		return 1
+	}
 
-	switch cmd {
-	case "setup":
-		cfg, parseErr := parseInitConfig()
-		if parseErr != nil {
-			err = parseErr
-		} else {
-			err = runInit(cfg)
-		}
-	case "sidecar":
-		err = runSidecar(parseSidecarConfig(), parseLDAPConfig())
-	default:
+	cmd := remaining[0]
+	if cmd != "setup" && cmd != "sidecar" {
 		fmt.Fprintf(stderr, "unknown command: %s\n", cmd)
 		return 1
 	}
 
+	cfg, err := loadConfig(*configPath)
 	if err != nil {
-		slog.Error(cmd+" failed", "error", err)
+		fmt.Fprintln(stderr, "config:", err)
+		return 1
+	}
+
+	setupLogging(cfg.LogLevel)
+
+	var cmdErr error
+
+	switch cmd {
+	case "setup":
+		initCfg, parseErr := cfg.toSetup()
+		if parseErr != nil {
+			cmdErr = parseErr
+		} else {
+			cmdErr = runInit(initCfg)
+		}
+	case "sidecar":
+		cmdErr = runSidecar(cfg.toSidecar(), cfg.toLDAP())
+	}
+
+	if cmdErr != nil {
+		slog.Error(cmd+" failed", "error", cmdErr)
 		return 1
 	}
 
 	return 0
-}
-
-func envOrDefault(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
-var errMissingAdminPW = errors.New("LDAP_ADMIN_PW is required")
-
-func parseInitConfig() (setup.Config, error) {
-	adminPW := os.Getenv("LDAP_ADMIN_PW")
-	if adminPW == "" {
-		return setup.Config{}, errMissingAdminPW
-	}
-	return setup.Config{
-		DataDir:    envOrDefault("LDAP_DATA_DIR", "/var/lib/ldap"),
-		RunDir:     envOrDefault("LDAP_RUN_DIR", "/var/run/slapd"),
-		RootpwPath: envOrDefault("LDAP_ROOTPW_PATH", "/etc/ldap/auth/rootpw.conf"),
-		AdminPW:    adminPW,
-	}, nil
 }

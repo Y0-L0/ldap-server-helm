@@ -1,0 +1,22 @@
+---
+{
+  apiVersion: "v1",
+  kind: "ConfigMap",
+  metadata: {
+    name: {{ printf "%s-ldap-manager" (include "common.names.fullname" .) | quote }},
+    labels: {{ include "common.labels.standard" (dict "customLabels" .Values.additionalLabels "context" $) | fromYaml | toJson }},
+  },
+  data: {
+    "config.json": {{ dict
+      "logLevel" .Values.ldapManager.config.logLevel
+      "dataDir" "/var/lib/ldap"
+      "runDir" "/var/run/slapd"
+      "rootpwPath" "/etc/ldap/auth/rootpw.conf"
+      "ldifSeedDir" "/seed"
+      "connection" (dict
+        "uri" "ldap://localhost:389"
+        "bindDN" (printf "cn=admin,%s" .Values.ldapServer.config.ldapBaseDn)
+      )
+    | toJson | quote }},
+  },
+}

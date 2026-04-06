@@ -21,7 +21,7 @@
       },
       spec: {
         initContainers: [{
-          name: "ldap-manager-init",
+          name: "ldap-manager-setup",
           image: {{ include "common.images.image" (dict "imageRoot" .Values.ldapManager.image "global" .Values.global "chart" .Chart) | quote }},
           imagePullPolicy: {{ coalesce .Values.ldapManager.image.pullPolicy ((.Values.global).imagePullPolicy) "IfNotPresent" | quote }},
           args: ["setup"],
@@ -41,6 +41,7 @@
             {name: "data", mountPath: "/var/lib/ldap"},
             {name: "run", mountPath: "/var/run/slapd"},
             {name: "etc-ldap", mountPath: "/etc/ldap/auth"},
+            {name: "ldap-manager-config", mountPath: "/etc/ldap-manager/config.json", subPath: "config.json"},
           ],
         }],
         containers: [
@@ -84,10 +85,6 @@
                   },
                 },
               },
-              {
-                name: "LDAP_BASE_DN",
-                value: {{ .Values.ldapServer.config.ldapBaseDn | quote }},
-              },
             ],
             ports: [{
               name: "health",
@@ -109,6 +106,7 @@
             {{ end }}
             volumeMounts: [
               {name: "data", mountPath: "/var/lib/ldap"},
+              {name: "ldap-manager-config", mountPath: "/etc/ldap-manager/config.json", subPath: "config.json"},
               {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
               {name: "seed-ldif", mountPath: "/seed"},
               {{ end }}
@@ -118,6 +116,7 @@
         volumes: [
           {name: "run", emptyDir: {}},
           {name: "etc-ldap", emptyDir: {}},
+          {name: "ldap-manager-config", configMap: {name: {{ printf "%s-ldap-manager" (include "common.names.fullname" .) | quote }}}},
           {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" (include "common.names.fullname" .) | quote }}{{ end }}}},
           {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
           {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" (include "common.names.fullname" .) | quote }}{{ end }}}},
