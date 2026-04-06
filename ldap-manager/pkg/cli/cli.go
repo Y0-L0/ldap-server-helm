@@ -15,7 +15,7 @@ const defaultConfigPath = "/etc/ldap-manager/config.json"
 
 type (
 	initFunc    func(setup.Config) error
-	sidecarFunc func(sidecar.Config, ldapConfig) error
+	sidecarFunc func(sidecar.Config, LDAPConfig) error
 )
 
 // Main runs the ldap-manager CLI. Returns an exit code.
@@ -52,14 +52,9 @@ func Main(args []string, stderr io.Writer, runInit initFunc, runSidecar sidecarF
 
 	switch cmd {
 	case "setup":
-		initCfg, parseErr := cfg.toSetup()
-		if parseErr != nil {
-			cmdErr = parseErr
-		} else {
-			cmdErr = runInit(initCfg)
-		}
+		cmdErr = runInit(cfg.SetupConfig())
 	case "sidecar":
-		cmdErr = runSidecar(cfg.toSidecar(), cfg.toLDAP())
+		cmdErr = runSidecar(cfg.SidecarConfig(), cfg.LDAPConfig())
 	}
 
 	if cmdErr != nil {

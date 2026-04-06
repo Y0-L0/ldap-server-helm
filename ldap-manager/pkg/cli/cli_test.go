@@ -14,7 +14,7 @@ const cmdName = "ldap-manager"
 
 var (
 	stubInit    initFunc    = func(setup.Config) error { return nil }
-	stubSidecar sidecarFunc = func(sidecar.Config, ldapConfig) error { return nil }
+	stubSidecar sidecarFunc = func(sidecar.Config, LDAPConfig) error { return nil }
 )
 
 // writeConfig serialises cfg to a temp file and returns its path.
@@ -29,6 +29,26 @@ func (s *Unittest) writeConfig(cfg Config) string {
 
 // configArgs returns --config <path> args for use in Main calls.
 func configArgs(path string) []string { return []string{"--config", path} }
+
+// fullConfig returns a Config with all required fields populated.
+// Individual tests override only the fields they care about.
+func fullConfig() Config {
+	return Config{
+		LogLevel:   "info",
+		DataDir:    "/var/lib/ldap",
+		RunDir:     "/var/run/slapd",
+		RootpwPath: "/etc/ldap/auth/rootpw.conf",
+		Connection: ConnectionConfig{
+			URI:    "ldapi:///",
+			BaseDN: "dc=example,dc=org",
+			BindDN: "cn=admin,dc=example,dc=org",
+		},
+		Sidecar: SidecarConfig{
+			HealthAddr: ":8080",
+			SeedDir:    "/seed",
+		},
+	}
+}
 
 func (s *Unittest) TestMain_NoArgs() {
 	// Argument validation happens before config loading — no config file needed.
@@ -55,7 +75,7 @@ func (s *Unittest) TestMain_MissingConfigFile() {
 
 func (s *Unittest) TestMain_CommandError() {
 	s.T().Setenv("LDAP_ADMIN_PW", "test")
-	cfgPath := s.writeConfig(Config{})
+	cfgPath := s.writeConfig(fullConfig())
 	ri := initFunc(func(setup.Config) error { return errors.New("boom") })
 
 	var stderr bytes.Buffer
@@ -63,24 +83,15 @@ func (s *Unittest) TestMain_CommandError() {
 	s.Require().Equal(1, code)
 }
 
-func (s *Unittest) TestMain_InitMissingPassword() {
-	s.T().Setenv("LDAP_ADMIN_PW", "")
-	cfgPath := s.writeConfig(Config{})
-
-	var stderr bytes.Buffer
-	code := Main(append([]string{cmdName}, append(configArgs(cfgPath), "setup")...), &stderr, stubInit, stubSidecar)
-	s.Require().Equal(1, code)
-}
-
 func (s *Unittest) TestMain_InitCustomConfig() {
 	tmp := s.T().TempDir()
 	s.T().Setenv("LDAP_ADMIN_PW", "secret")
 
-	cfgPath := s.writeConfig(Config{
-		DataDir:    filepath.Join(tmp, "data"),
-		RunDir:     filepath.Join(tmp, "run"),
-		RootpwPath: filepath.Join(tmp, "rootpw.conf"),
-	})
+	cfg := fullConfig()
+	cfg.DataDir = filepath.Join(tmp, "data")
+	cfg.RunDir = filepath.Join(tmp, "run")
+	cfg.RootpwPath = filepath.Join(tmp, "rootpw.conf")
+	cfgPath := s.writeConfig(cfg)
 
 	var got setup.Config
 	ri := initFunc(func(cfg setup.Config) error { got = cfg; return nil })
@@ -97,22 +108,22 @@ func (s *Unittest) TestMain_InitCustomConfig() {
 func (s *Unittest) TestMain_SidecarCustomConfig() {
 	s.T().Setenv("LDAP_ADMIN_PW", "pw")
 
-	cfgPath := s.writeConfig(Config{
-		DataDir: "/custom/data",
-		Connection: ConnectionConfig{
-			URI:    "ldap://remote:389",
-			BaseDN: "dc=test,dc=org",
-			BindDN: "cn=admin,dc=test,dc=org",
-		},
-		Sidecar: SidecarConfig{
-			HealthAddr: ":9090",
-			SeedDir:    "/custom/seed",
-		},
-	})
+	cfg := fullConfig()
+	cfg.DataDir = "/custom/data"
+	cfg.Connection = ConnectionConfig{
+		URI:    "ldap://remote:389",
+		BaseDN: "dc=test,dc=org",
+		BindDN: "cn=admin,dc=test,dc=org",
+	}
+	cfg.Sidecar = SidecarConfig{
+		HealthAddr: ":9090",
+		SeedDir:    "/custom/seed",
+	}
+	cfgPath := s.writeConfig(cfg)
 
 	var gotCfg sidecar.Config
-	var gotLDAP ldapConfig
-	rs := sidecarFunc(func(cfg sidecar.Config, lcfg ldapConfig) error {
+	var gotLDAP LDAPConfig
+	rs := sidecarFunc(func(cfg sidecar.Config, lcfg LDAPConfig) error {
 		gotCfg = cfg
 		gotLDAP = lcfg
 
@@ -128,24 +139,4 @@ func (s *Unittest) TestMain_SidecarCustomConfig() {
 	s.Require().Equal("ldap://remote:389", gotLDAP.uri)
 	s.Require().Equal("cn=admin,dc=test,dc=org", gotLDAP.bindDN)
 	s.Require().Equal("pw", gotLDAP.bindPW)
-}
-
-func (s *Unittest) TestMain_SidecarBindDNDerivedFromBaseDN() {
-	cfgPath := s.writeConfig(Config{
-		Connection: ConnectionConfig{
-			BaseDN: "dc=example,dc=org",
-			// BindDN intentionally omitted — should be derived from BaseDN.
-		},
-	})
-
-	var gotLDAP ldapConfig
-	rs := sidecarFunc(func(_ sidecar.Config, lcfg ldapConfig) error {
-		gotLDAP = lcfg
-
-		return nil
-	})
-
-	var stderr bytes.Buffer
-	Main(append([]string{cmdName}, append(configArgs(cfgPath), "sidecar")...), &stderr, stubInit, rs)
-	s.Require().Equal("cn=admin,dc=example,dc=org", gotLDAP.bindDN)
 }

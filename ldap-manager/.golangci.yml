@@ -153,6 +153,6 @@ linters:
         linters:
           - dupl
           - reassign
-      - path: pkg/cli/config\.go
+      - path: _test\.go
         linters: [gosec]
-        text: G101  # configDefaults() contains file paths, not credentials; gosec misidentifies RootpwPath
+        text: G101  # test fixtures use hardcoded credentials by necessity
