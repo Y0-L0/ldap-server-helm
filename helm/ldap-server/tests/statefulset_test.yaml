@@ -15,7 +15,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.initContainers[0].name
-          value: ldap-manager-init
+          value: ldap-manager-setup
       - equal:
           path: spec.template.spec.initContainers[0].args[0]
           value: setup

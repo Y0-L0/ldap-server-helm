@@ -25,6 +25,9 @@ ldapServer:
   resources: {}
 
 ldapManager:
+  config:
+    logLevel: info
+
   image:
     registry: ghcr.io
     repository: y0-l0/ldap-server-helm/ldap-manager

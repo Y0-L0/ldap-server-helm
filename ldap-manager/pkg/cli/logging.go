@@ -6,11 +6,8 @@ import (
 	"strings"
 )
 
-func setupLogging() {
-	level := parseLogLevel(os.Getenv("LOG_LEVEL"))
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-	})
+func setupLogging(level string) {
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: parseLogLevel(level)})
 	slog.SetDefault(slog.New(handler))
 }
 
