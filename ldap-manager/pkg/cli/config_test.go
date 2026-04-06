@@ -10,29 +10,21 @@ func (s *Unittest) TestLoadConfig_FullConfig() {
 		"dataDir": "/data",
 		"runDir": "/run",
 		"rootpwPath": "/etc/rootpw.conf",
+		"ldifSeedDir": "/custom/seed",
 		"connection": {
 			"uri": "ldap://localhost:389/",
-			"baseDN": "dc=example,dc=org",
 			"bindDN": "cn=admin,dc=example,dc=org"
-		},
-		"sidecar": {
-			"healthAddr": ":9090",
-			"seedDir": "/custom/seed"
 		}
 	}`)
 	expected := Config{
-		LogLevel:   "debug",
-		DataDir:    "/data",
-		RunDir:     "/run",
-		RootpwPath: "/etc/rootpw.conf",
+		LogLevel:    "debug",
+		DataDir:     "/data",
+		RunDir:      "/run",
+		RootpwPath:  "/etc/rootpw.conf",
+		LdifSeedDir: "/custom/seed",
 		Connection: ConnectionConfig{
 			URI:    "ldap://localhost:389/",
-			BaseDN: "dc=example,dc=org",
 			BindDN: "cn=admin,dc=example,dc=org",
-		},
-		Sidecar: SidecarConfig{
-			HealthAddr: ":9090",
-			SeedDir:    "/custom/seed",
 		},
 		AdminPW: "secret",
 	}
