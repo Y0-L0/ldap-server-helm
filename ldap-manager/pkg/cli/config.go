@@ -2,8 +2,9 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/setup"
@@ -11,6 +12,7 @@ import (
 )
 
 // Config is the top-level ldap-manager configuration, loaded from a JSON file.
+// AdminPW is the only field not sourced from the file — it comes from LDAP_ADMIN_PW.
 type Config struct {
 	LogLevel   string           `json:"logLevel"`
 	DataDir    string           `json:"dataDir"`
@@ -18,6 +20,7 @@ type Config struct {
 	RootpwPath string           `json:"rootpwPath"`
 	Connection ConnectionConfig `json:"connection"`
 	Sidecar    SidecarConfig    `json:"sidecar"`
+	AdminPW    string           `json:"-"`
 }
 
 // ConnectionConfig holds LDAP connection settings used by the sidecar.
@@ -33,23 +36,16 @@ type SidecarConfig struct {
 	SeedDir    string `json:"seedDir"`
 }
 
-var errMissingAdminPW = errors.New("LDAP_ADMIN_PW is required")
-
-func (cfg Config) toSetup() (setup.Config, error) {
-	adminPW := os.Getenv("LDAP_ADMIN_PW")
-	if adminPW == "" {
-		return setup.Config{}, errMissingAdminPW
-	}
-
+func (cfg Config) SetupConfig() setup.Config {
 	return setup.Config{
 		DataDir:    cfg.DataDir,
 		RunDir:     cfg.RunDir,
 		RootpwPath: cfg.RootpwPath,
-		AdminPW:    adminPW,
-	}, nil
+		AdminPW:    cfg.AdminPW,
+	}
 }
 
-func (cfg Config) toSidecar() sidecar.Config {
+func (cfg Config) SidecarConfig() sidecar.Config {
 	return sidecar.Config{
 		HealthAddr: cfg.Sidecar.HealthAddr,
 		SeedDir:    cfg.Sidecar.SeedDir,
@@ -58,45 +54,63 @@ func (cfg Config) toSidecar() sidecar.Config {
 	}
 }
 
-func (cfg Config) toLDAP() ldapConfig {
-	bindDN := cfg.Connection.BindDN
-	if bindDN == "" {
-		bindDN = "cn=admin," + cfg.Connection.BaseDN
-	}
-
-	return ldapConfig{
+func (cfg Config) LDAPConfig() LDAPConfig {
+	return LDAPConfig{
 		uri:    cfg.Connection.URI,
-		bindDN: bindDN,
-		bindPW: os.Getenv("LDAP_ADMIN_PW"),
+		bindDN: cfg.Connection.BindDN,
+		bindPW: cfg.AdminPW,
 	}
 }
 
-// loadConfig reads a JSON config file at path. Fields absent from the file
-// retain their built-in default values.
+// loadConfig reads a JSON config file at path and the LDAP_ADMIN_PW env var.
+// All fields are required — missing fields are reported as an error.
 func loadConfig(path string) (Config, error) {
-	cfg := configDefaults()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, err
 	}
+
+	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, err
 	}
+
+	cfg.AdminPW = os.Getenv("LDAP_ADMIN_PW")
+
+	if err := cfg.validate(); err != nil {
+		return Config{}, err
+	}
+
 	return cfg, nil
 }
 
-func configDefaults() Config {
-	return Config{
-		LogLevel:   "info",
-		DataDir:    "/var/lib/ldap",
-		RunDir:     "/var/run/slapd",
-		RootpwPath: "/etc/ldap/auth/rootpw.conf",
-		Connection: ConnectionConfig{
-			URI: "ldapi:///",
-		},
-		Sidecar: SidecarConfig{
-			HealthAddr: ":8080",
-			SeedDir:    "/seed",
-		},
+func (cfg Config) validate() error {
+	required := []struct {
+		name string
+		val  string
+	}{
+		{"logLevel", cfg.LogLevel},
+		{"dataDir", cfg.DataDir},
+		{"runDir", cfg.RunDir},
+		{"rootpwPath", cfg.RootpwPath},
+		{"connection.uri", cfg.Connection.URI},
+		{"connection.baseDN", cfg.Connection.BaseDN},
+		{"connection.bindDN", cfg.Connection.BindDN},
+		{"sidecar.healthAddr", cfg.Sidecar.HealthAddr},
+		{"sidecar.seedDir", cfg.Sidecar.SeedDir},
+		{"LDAP_ADMIN_PW", cfg.AdminPW},
 	}
+
+	var missing []string
+	for _, f := range required {
+		if f.val == "" {
+			missing = append(missing, f.name)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required fields: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
 }

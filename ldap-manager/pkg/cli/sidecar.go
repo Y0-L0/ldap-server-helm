@@ -9,14 +9,14 @@ import (
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
-type ldapConfig struct {
+type LDAPConfig struct {
 	uri    string
 	bindDN string
 	bindPW string
 }
 
 // RunSidecar is the real sidecarFunc implementation used in production.
-func RunSidecar(cfg sidecar.Config, lcfg ldapConfig) error {
+func RunSidecar(cfg sidecar.Config, lcfg LDAPConfig) error {
 	backend := &ldap.RealLDAP{
 		URI:    lcfg.uri,
 		BindDN: lcfg.bindDN,

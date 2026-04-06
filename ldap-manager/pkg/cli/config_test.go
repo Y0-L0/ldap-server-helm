@@ -5,8 +5,7 @@ import (
 )
 
 func (s *Unittest) TestLoadConfig_FullConfig() {
-	path := filepath.Join(s.T().TempDir(), "config.json")
-	s.WriteFile(path, []byte(`{
+	jsonConfig := []byte(`{
 		"logLevel": "debug",
 		"dataDir": "/data",
 		"runDir": "/run",
@@ -20,33 +19,58 @@ func (s *Unittest) TestLoadConfig_FullConfig() {
 			"healthAddr": ":9090",
 			"seedDir": "/custom/seed"
 		}
-	}`))
+	}`)
+	expected := Config{
+		LogLevel:   "debug",
+		DataDir:    "/data",
+		RunDir:     "/run",
+		RootpwPath: "/etc/rootpw.conf",
+		Connection: ConnectionConfig{
+			URI:    "ldap://localhost:389/",
+			BaseDN: "dc=example,dc=org",
+			BindDN: "cn=admin,dc=example,dc=org",
+		},
+		Sidecar: SidecarConfig{
+			HealthAddr: ":9090",
+			SeedDir:    "/custom/seed",
+		},
+		AdminPW: "secret",
+	}
 
-	cfg, err := loadConfig(path)
+	s.T().Setenv("LDAP_ADMIN_PW", "secret")
+
+	path := filepath.Join(s.T().TempDir(), "config.json")
+	s.WriteFile(path, jsonConfig)
+
+	actual, err := loadConfig(path)
+
 	s.Require().NoError(err)
-	s.Equal("debug", cfg.LogLevel)
-	s.Equal("/data", cfg.DataDir)
-	s.Equal("/run", cfg.RunDir)
-	s.Equal("/etc/rootpw.conf", cfg.RootpwPath)
-	s.Equal("ldap://localhost:389/", cfg.Connection.URI)
-	s.Equal("dc=example,dc=org", cfg.Connection.BaseDN)
-	s.Equal("cn=admin,dc=example,dc=org", cfg.Connection.BindDN)
-	s.Equal(":9090", cfg.Sidecar.HealthAddr)
-	s.Equal("/custom/seed", cfg.Sidecar.SeedDir)
+	s.Equal(expected, actual)
 }
 
-func (s *Unittest) TestLoadConfig_PartialConfig_KeepsDefaults() {
+func (s *Unittest) TestLoadConfig_AdminPW_NotInJSON() {
+	s.T().Setenv("LDAP_ADMIN_PW", "secret")
 	path := filepath.Join(s.T().TempDir(), "config.json")
-	s.WriteFile(path, []byte(`{"dataDir": "/custom/data"}`))
+	s.WriteFile(path, []byte(`{"adminPW": "should-be-ignored"}`))
 
-	cfg, err := loadConfig(path)
-	s.Require().NoError(err)
-	s.Equal("/custom/data", cfg.DataDir)
-	// Fields absent from the file retain their built-in defaults.
-	s.Equal("info", cfg.LogLevel)
-	s.Equal("/var/run/slapd", cfg.RunDir)
-	s.Equal("ldapi:///", cfg.Connection.URI)
-	s.Equal(":8080", cfg.Sidecar.HealthAddr)
+	actual, err := loadConfig(path)
+
+	// Validation will fail on missing fields, but AdminPW must come from env.
+	s.Require().Error(err)
+	s.NotEqual("should-be-ignored", actual.AdminPW)
+}
+
+func (s *Unittest) TestLoadConfig_MissingFields() {
+	s.T().Setenv("LDAP_ADMIN_PW", "")
+	path := filepath.Join(s.T().TempDir(), "config.json")
+	s.WriteFile(path, []byte(`{}`))
+
+	_, err := loadConfig(path)
+	s.Require().Error(err)
+	s.Contains(err.Error(), "missing required fields")
+	s.Contains(err.Error(), "LDAP_ADMIN_PW")
+	s.Contains(err.Error(), "logLevel")
+	s.Contains(err.Error(), "connection.bindDN")
 }
 
 func (s *Unittest) TestLoadConfig_MissingFile() {
@@ -55,6 +79,7 @@ func (s *Unittest) TestLoadConfig_MissingFile() {
 }
 
 func (s *Unittest) TestLoadConfig_MalformedJSON() {
+	s.T().Setenv("LDAP_ADMIN_PW", "secret")
 	path := filepath.Join(s.T().TempDir(), "config.json")
 	s.WriteFile(path, []byte(`not json`))
 
