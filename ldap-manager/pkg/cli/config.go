@@ -11,29 +11,24 @@ import (
 	"github.com/y0-l0/ldap-server-helm/ldap-manager/pkg/sidecar"
 )
 
+const healthAddr = ":8080"
+
 // Config is the top-level ldap-manager configuration, loaded from a JSON file.
 // AdminPW is the only field not sourced from the file — it comes from LDAP_ADMIN_PW.
 type Config struct {
-	LogLevel   string           `json:"logLevel"`
-	DataDir    string           `json:"dataDir"`
-	RunDir     string           `json:"runDir"`
-	RootpwPath string           `json:"rootpwPath"`
-	Connection ConnectionConfig `json:"connection"`
-	Sidecar    SidecarConfig    `json:"sidecar"`
-	AdminPW    string           `json:"-"`
+	LogLevel    string           `json:"logLevel"`
+	DataDir     string           `json:"dataDir"`
+	RunDir      string           `json:"runDir"`
+	RootpwPath  string           `json:"rootpwPath"`
+	LdifSeedDir string           `json:"ldifSeedDir"`
+	Connection  ConnectionConfig `json:"connection"`
+	AdminPW     string           `json:"-"`
 }
 
 // ConnectionConfig holds LDAP connection settings used by the sidecar.
 type ConnectionConfig struct {
 	URI    string `json:"uri"`
-	BaseDN string `json:"baseDN"`
 	BindDN string `json:"bindDN"`
-}
-
-// SidecarConfig holds settings exclusive to the sidecar subcommand.
-type SidecarConfig struct {
-	HealthAddr string `json:"healthAddr"`
-	SeedDir    string `json:"seedDir"`
 }
 
 func (cfg Config) SetupConfig() setup.Config {
@@ -47,15 +42,15 @@ func (cfg Config) SetupConfig() setup.Config {
 
 func (cfg Config) SidecarConfig() sidecar.Config {
 	return sidecar.Config{
-		HealthAddr: cfg.Sidecar.HealthAddr,
-		SeedDir:    cfg.Sidecar.SeedDir,
+		HealthAddr: healthAddr,
+		SeedDir:    cfg.LdifSeedDir,
 		DataDir:    cfg.DataDir,
 		PollDelay:  2 * time.Second,
 	}
 }
 
-func (cfg Config) LDAPConfig() LDAPConfig {
-	return LDAPConfig{
+func (cfg Config) ldapCfg() ldapConfig {
+	return ldapConfig{
 		uri:    cfg.Connection.URI,
 		bindDN: cfg.Connection.BindDN,
 		bindPW: cfg.AdminPW,
@@ -85,32 +80,39 @@ func loadConfig(path string) (Config, error) {
 }
 
 func (cfg Config) validate() error {
-	required := []struct {
-		name string
-		val  string
-	}{
-		{"logLevel", cfg.LogLevel},
-		{"dataDir", cfg.DataDir},
-		{"runDir", cfg.RunDir},
-		{"rootpwPath", cfg.RootpwPath},
-		{"connection.uri", cfg.Connection.URI},
-		{"connection.baseDN", cfg.Connection.BaseDN},
-		{"connection.bindDN", cfg.Connection.BindDN},
-		{"sidecar.healthAddr", cfg.Sidecar.HealthAddr},
-		{"sidecar.seedDir", cfg.Sidecar.SeedDir},
-		{"LDAP_ADMIN_PW", cfg.AdminPW},
-	}
-
 	var missing []string
-	for _, f := range required {
-		if f.val == "" {
-			missing = append(missing, f.name)
-		}
+	if cfg.LogLevel == "" {
+		missing = append(missing, "logLevel")
 	}
-
+	if cfg.DataDir == "" {
+		missing = append(missing, "dataDir")
+	}
+	if cfg.RunDir == "" {
+		missing = append(missing, "runDir")
+	}
+	if cfg.RootpwPath == "" {
+		missing = append(missing, "rootpwPath")
+	}
+	if cfg.LdifSeedDir == "" {
+		missing = append(missing, "ldifSeedDir")
+	}
+	if cfg.AdminPW == "" {
+		missing = append(missing, "LDAP_ADMIN_PW")
+	}
+	missing = append(missing, cfg.Connection.missing()...)
 	if len(missing) > 0 {
 		return fmt.Errorf("missing required fields: %s", strings.Join(missing, ", "))
 	}
-
 	return nil
+}
+
+func (c ConnectionConfig) missing() []string {
+	var missing []string
+	if c.URI == "" {
+		missing = append(missing, "connection.uri")
+	}
+	if c.BindDN == "" {
+		missing = append(missing, "connection.bindDN")
+	}
+	return missing
 }

@@ -14,7 +14,7 @@ const cmdName = "ldap-manager"
 
 var (
 	stubInit    initFunc    = func(setup.Config) error { return nil }
-	stubSidecar sidecarFunc = func(sidecar.Config, LDAPConfig) error { return nil }
+	stubSidecar sidecarFunc = func(sidecar.Config, ldapConfig) error { return nil }
 )
 
 // writeConfig serialises cfg to a temp file and returns its path.
@@ -34,18 +34,14 @@ func configArgs(path string) []string { return []string{"--config", path} }
 // Individual tests override only the fields they care about.
 func fullConfig() Config {
 	return Config{
-		LogLevel:   "info",
-		DataDir:    "/var/lib/ldap",
-		RunDir:     "/var/run/slapd",
-		RootpwPath: "/etc/ldap/auth/rootpw.conf",
+		LogLevel:    "info",
+		DataDir:     "/var/lib/ldap",
+		RunDir:      "/var/run/slapd",
+		RootpwPath:  "/etc/ldap/auth/rootpw.conf",
+		LdifSeedDir: "/seed",
 		Connection: ConnectionConfig{
 			URI:    "ldapi:///",
-			BaseDN: "dc=example,dc=org",
 			BindDN: "cn=admin,dc=example,dc=org",
-		},
-		Sidecar: SidecarConfig{
-			HealthAddr: ":8080",
-			SeedDir:    "/seed",
 		},
 	}
 }
@@ -110,20 +106,16 @@ func (s *Unittest) TestMain_SidecarCustomConfig() {
 
 	cfg := fullConfig()
 	cfg.DataDir = "/custom/data"
+	cfg.LdifSeedDir = "/custom/seed"
 	cfg.Connection = ConnectionConfig{
 		URI:    "ldap://remote:389",
-		BaseDN: "dc=test,dc=org",
 		BindDN: "cn=admin,dc=test,dc=org",
-	}
-	cfg.Sidecar = SidecarConfig{
-		HealthAddr: ":9090",
-		SeedDir:    "/custom/seed",
 	}
 	cfgPath := s.writeConfig(cfg)
 
 	var gotCfg sidecar.Config
-	var gotLDAP LDAPConfig
-	rs := sidecarFunc(func(cfg sidecar.Config, lcfg LDAPConfig) error {
+	var gotLDAP ldapConfig
+	rs := sidecarFunc(func(cfg sidecar.Config, lcfg ldapConfig) error {
 		gotCfg = cfg
 		gotLDAP = lcfg
 
@@ -133,7 +125,7 @@ func (s *Unittest) TestMain_SidecarCustomConfig() {
 	var stderr bytes.Buffer
 	code := Main(append([]string{cmdName}, append(configArgs(cfgPath), "sidecar")...), &stderr, stubInit, rs)
 	s.Require().Equal(0, code)
-	s.Require().Equal(":9090", gotCfg.HealthAddr)
+	s.Require().Equal(healthAddr, gotCfg.HealthAddr)
 	s.Require().Equal("/custom/seed", gotCfg.SeedDir)
 	s.Require().Equal("/custom/data", gotCfg.DataDir)
 	s.Require().Equal("ldap://remote:389", gotLDAP.uri)
