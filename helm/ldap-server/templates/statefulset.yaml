@@ -38,10 +38,23 @@
           resources: {{ .Values.ldapManager.resources | toJson }},
           {{ end }}
           volumeMounts: [
-            {name: "data", mountPath: "/var/lib/ldap"},
-            {name: "run", mountPath: "/var/run/slapd"},
-            {name: "etc-ldap", mountPath: "/etc/ldap/auth"},
-            {name: "ldap-manager-config", mountPath: "/etc/ldap-manager/config.json", subPath: "config.json"},
+            {
+              name: "data",
+              mountPath: "/var/lib/ldap",
+            },
+            {
+              name: "run",
+              mountPath: "/var/run/slapd",
+            },
+            {
+              name: "etc-ldap",
+              mountPath: "/etc/ldap/auth",
+            },
+            {
+              name: "ldap-manager-config",
+              mountPath: "/etc/ldap-manager/config.json",
+              subPath: "config.json",
+            },
           ],
         }],
         containers: [
@@ -74,10 +87,23 @@
             resources: {{ .Values.ldapServer.resources | toJson }},
             {{ end }}
             volumeMounts: [
-              {name: "data", mountPath: "/var/lib/ldap"},
-              {name: "run", mountPath: "/var/run/slapd"},
-              {name: "etc-ldap", mountPath: "/etc/ldap/auth"},
-              {name: "slapd-conf", mountPath: "/etc/ldap/slapd.conf", subPath: "slapd.conf"},
+              {
+                name: "data",
+                mountPath: "/var/lib/ldap",
+              },
+              {
+                name: "run",
+                mountPath: "/var/run/slapd",
+              },
+              {
+                name: "etc-ldap",
+                mountPath: "/etc/ldap/auth",
+              },
+              {
+                name: "slapd-conf",
+                mountPath: "/etc/ldap/slapd.conf",
+                subPath: "slapd.conf",
+              },
             ],
           },
           {
@@ -105,24 +131,52 @@
             resources: {{ .Values.ldapManager.resources | toJson }},
             {{ end }}
             volumeMounts: [
-              {name: "data", mountPath: "/var/lib/ldap"},
-              {name: "ldap-manager-config", mountPath: "/etc/ldap-manager/config.json", subPath: "config.json"},
+              {
+                name: "data",
+                mountPath: "/var/lib/ldap",
+              },
+              {
+                name: "ldap-manager-config",
+                mountPath: "/etc/ldap-manager/config.json",
+                subPath: "config.json",
+              },
               {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
-              {name: "seed-ldif", mountPath: "/seed"},
+              {
+                name: "seed-ldif",
+                mountPath: "/seed",
+              },
               {{ end }}
             ],
           },
         ],
         volumes: [
-          {name: "run", emptyDir: {}},
-          {name: "etc-ldap", emptyDir: {}},
-          {name: "ldap-manager-config", configMap: {name: {{ printf "%s-ldap-manager" (include "common.names.fullname" .) | quote }}}},
-          {name: "slapd-conf", configMap: {name: {{ if .Values.slapdConf.existingConfigMap }}{{ .Values.slapdConf.existingConfigMap | quote }}{{ else }}{{ printf "%s-slapd-conf" (include "common.names.fullname" .) | quote }}{{ end }}}},
+          {
+            name: "run",
+            emptyDir: {},
+          },
+          {
+            name: "etc-ldap",
+            emptyDir: {},
+          },
+          {
+            name: "ldap-manager-config",
+            configMap: {name: {{ printf "%s-ldap-manager" (include "common.names.fullname" .) | quote }}},
+          },
+          {
+            name: "slapd-conf",
+            configMap: {name: {{ coalesce .Values.slapdConf.existingConfigMap (printf "%s-slapd-conf" (include "common.names.fullname" .)) | quote }}},
+          },
           {{ if or .Values.seedData.existingConfigMap .Values.seedData.content .Values.seedData.file }}
-          {name: "seed-ldif", configMap: {name: {{ if .Values.seedData.existingConfigMap }}{{ .Values.seedData.existingConfigMap | quote }}{{ else }}{{ printf "%s-seed-ldif" (include "common.names.fullname" .) | quote }}{{ end }}}},
+          {
+            name: "seed-ldif",
+            configMap: {name: {{ coalesce .Values.seedData.existingConfigMap (printf "%s-seed-ldif" (include "common.names.fullname" .)) | quote }}},
+          },
           {{ end }}
           {{ if not .Values.persistence.enabled }}
-          {name: "data", emptyDir: {}},
+          {
+            name: "data",
+            emptyDir: {},
+          },
           {{ end }}
         ],
         nodeSelector: {{ .Values.nodeSelector | toJson }},
