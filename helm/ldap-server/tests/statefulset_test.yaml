@@ -41,14 +41,24 @@ tests:
           path: spec.template.spec.containers[1].args[0]
           value: sidecar
 
-  - it: configures health probes on the sidecar
+  - it: configures health probes on slapd via the sidecar endpoint
     asserts:
       - equal:
-          path: spec.template.spec.containers[1].livenessProbe.httpGet.path
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
           value: /healthz
       - equal:
-          path: spec.template.spec.containers[1].readinessProbe.httpGet.path
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 8080
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.path
           value: /readyz
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 8080
+      - notExists:
+          path: spec.template.spec.containers[1].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[1].readinessProbe
 
   - it: uses generated secret name by default
     asserts:

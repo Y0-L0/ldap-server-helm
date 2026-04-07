@@ -60,6 +60,16 @@
               containerPort: 389,
               protocol: "TCP",
             }],
+            livenessProbe: {
+              httpGet: {path: "/healthz", port: 8080},
+              initialDelaySeconds: 5,
+              periodSeconds: 10,
+            },
+            readinessProbe: {
+              httpGet: {path: "/readyz", port: 8080},
+              initialDelaySeconds: 5,
+              periodSeconds: 10,
+            },
             {{ if .Values.ldapServer.resources }}
             resources: {{ .Values.ldapServer.resources | toJson }},
             {{ end }}
@@ -91,16 +101,6 @@
               containerPort: 8080,
               protocol: "TCP",
             }],
-            livenessProbe: {
-              httpGet: {path: "/healthz", port: "health"},
-              initialDelaySeconds: 5,
-              periodSeconds: 10,
-            },
-            readinessProbe: {
-              httpGet: {path: "/readyz", port: "health"},
-              initialDelaySeconds: 5,
-              periodSeconds: 10,
-            },
             {{ if .Values.ldapManager.resources }}
             resources: {{ .Values.ldapManager.resources | toJson }},
             {{ end }}
