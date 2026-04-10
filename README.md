@@ -1,7 +1,14 @@
 # ldap-server
 
 [![CI](https://github.com/y0-l0/ldap-server-helm/actions/workflows/prek.yml/badge.svg)](https://github.com/y0-l0/ldap-server-helm/actions/workflows/prek.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Y0-L0_ldap-server-helm&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Y0-L0_ldap-server-helm)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=Y0-L0_ldap-server-helm&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=Y0-L0_ldap-server-helm)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=Y0-L0_ldap-server-helm&metric=bugs)](https://sonarcloud.io/summary/new_code?id=Y0-L0_ldap-server-helm)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=Y0-L0_ldap-server-helm&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=Y0-L0_ldap-server-helm)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Y0-L0_ldap-server-helm&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Y0-L0_ldap-server-helm)
+[![Go Report Card](https://goreportcard.com/badge/github.com/y0-l0/ldap-server-helm/ldap-manager)](https://goreportcard.com/report/github.com/y0-l0/ldap-server-helm/ldap-manager)
 [![Release](https://img.shields.io/github/v/release/y0-l0/ldap-server-helm)](https://github.com/y0-l0/ldap-server-helm/releases/latest)
+
 Helm chart to deploy OpenLDAP on Kubernetes. Without a single line of bash.
 
 The ldap-server pod deployed by this Helm chart runs exactly two binaries:
